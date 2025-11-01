@@ -18,7 +18,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useAuth, useFirestore } from "@/firebase";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useAuthContext } from "@/contexts/auth-provider";
+
 
 const formSchema = z.object({
   photo: z.any().refine(file => file?.length == 1, "Photo is required."),
@@ -30,6 +34,9 @@ export function UploadForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
+  const { user } = useAuthContext();
+  const firestore = useFirestore();
+  const storage = getStorage();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -42,25 +49,48 @@ export function UploadForm() {
   const photoRef = form.register("photo");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user || !firestore) {
+        toast({ title: "Authentication error", description: "You must be logged in to upload photos.", variant: "destructive" });
+        return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate an API call for upload
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+        const photoFile = values.photo[0];
+        const storageRef = ref(storage, `photos/${user.uid}/${Date.now()}_${photoFile.name}`);
+        const uploadResult = await uploadBytes(storageRef, photoFile);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
 
-    console.log({
-      photo: values.photo[0],
-      note: values.note,
-      tags: values.tags.split(',').map(tag => tag.trim()),
-    });
+        // TODO: This assumes the user has a family. In a real app, you'd get this from the user's profile.
+        const familyId = "default-family"; 
+
+        await addDoc(collection(firestore, `families/${familyId}/photos`), {
+            userId: user.uid,
+            familyId: familyId,
+            storageUrl: downloadURL,
+            textNote: values.note,
+            tagIds: values.tags.split(',').map(tag => tag.trim()),
+            uploadDate: serverTimestamp(),
+        });
     
-    toast({
-      title: "Memory Uploaded! 🎉",
-      description: "Your photo has been successfully added to the vault.",
-    });
+        toast({
+        title: "Memory Uploaded! 🎉",
+        description: "Your photo has been successfully added to the vault.",
+        });
 
-    form.reset();
-    setFileName("");
-    setIsSubmitting(false);
+        form.reset();
+        setFileName("");
+    } catch (error: any) {
+        console.error("Upload failed", error);
+        toast({
+            title: "Upload Failed",
+            description: error.message || "An unexpected error occurred.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
