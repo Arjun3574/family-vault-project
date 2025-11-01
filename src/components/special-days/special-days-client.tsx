@@ -49,8 +49,8 @@ export function SpecialDaysClient({ initialDays }: SpecialDaysClientProps) {
                 </CardHeader>
                 <CardContent className="flex-grow">
                     <div className="space-y-2">
-                        <p className="text-sm font-medium">Event Type: <Badge variant="outline">{day.eventType}</Badge></p>
-                        <p className="text-sm font-medium">Theme: {day.theme ? <Badge variant="secondary" className="capitalize">{day.theme}</Badge> : 'Not set'}</p>
+                        <div className="text-sm font-medium">Event Type: <Badge variant="outline">{day.eventType}</Badge></div>
+                        <div className="text-sm font-medium">Theme: {day.theme ? <Badge variant="secondary" className="capitalize">{day.theme}</Badge> : 'Not set'}</div>
                     </div>
                 </CardContent>
                 <CardFooter>
