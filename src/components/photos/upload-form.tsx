@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
 import { useState } from "react";
-import { useAuth, useFirestore } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuthContext } from "@/contexts/auth-provider";
@@ -63,17 +63,18 @@ export function UploadForm() {
         const uploadResult = await uploadBytes(storageRef, photoFile);
         const downloadURL = await getDownloadURL(uploadResult.ref);
 
-        // TODO: This assumes the user has a family. In a real app, you'd get this from the user's profile.
         const familyId = "default-family"; 
 
-        addDocumentNonBlocking(collection(firestore, `families/${familyId}/photos`), {
+        const photoData = {
             userId: user.uid,
             familyId: familyId,
             storageUrl: downloadURL,
             textNote: values.note,
             tagIds: values.tags.split(',').map(tag => tag.trim()),
             uploadDate: serverTimestamp(),
-        });
+        };
+
+        addDocumentNonBlocking(collection(firestore, `families/${familyId}/photos`), photoData);
     
         toast({
         title: "Memory Uploaded! 🎉",
