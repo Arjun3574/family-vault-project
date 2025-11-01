@@ -19,10 +19,11 @@ import { useToast } from "@/hooks/use-toast"
 import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
 import { useState } from "react";
 import { useFirestore } from "@/firebase";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { Progress } from "@/components/ui/progress";
 
 
 const formSchema = z.object({
@@ -35,6 +36,7 @@ export function UploadForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const { user } = useAuthContext();
   const firestore = useFirestore();
   const storage = getStorage();
@@ -49,50 +51,72 @@ export function UploadForm() {
   
   const photoRef = form.register("photo");
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !firestore) {
         toast({ title: "Authentication error", description: "You must be logged in to upload photos.", variant: "destructive" });
         return;
     }
 
     setIsSubmitting(true);
-
-    try {
-        const photoFile = values.photo[0];
-        const storageRef = ref(storage, `photos/${user.uid}/${Date.now()}_${photoFile.name}`);
-        const uploadResult = await uploadBytes(storageRef, photoFile);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-
-        const familyId = "default-family"; 
-
-        const photoData = {
-            userId: user.uid,
-            familyId: familyId,
-            storageUrl: downloadURL,
-            textNote: values.note,
-            tagIds: values.tags.split(',').map(tag => tag.trim()),
-            uploadDate: serverTimestamp(),
-        };
-
-        addDocumentNonBlocking(collection(firestore, `families/${familyId}/photos`), photoData);
+    const photoFile = values.photo[0];
+    const storageRef = ref(storage, `photos/${user.uid}/${Date.now()}_${photoFile.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, photoFile);
     
-        toast({
-        title: "Memory Uploaded! 🎉",
-        description: "Your photo has been successfully added to the vault.",
-        });
+    // Give immediate feedback
+    toast({
+      title: "Uploading Memory! 🎉",
+      description: "Your photo is being added to the vault in the background.",
+    });
+    form.reset();
+    setFileName("");
 
-        form.reset();
-        setFileName("");
-    } catch (error: any) {
+    uploadTask.on('state_changed', 
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      }, 
+      (error) => {
         console.error("Upload failed", error);
         toast({
             title: "Upload Failed",
             description: error.message || "An unexpected error occurred.",
             variant: "destructive",
         });
-    } finally {
         setIsSubmitting(false);
-    }
+        setUploadProgress(null);
+      }, 
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          const familyId = "default-family"; 
+
+          const photoData = {
+              userId: user.uid,
+              familyId: familyId,
+              storageUrl: downloadURL,
+              textNote: values.note,
+              tagIds: values.tags.split(',').map(tag => tag.trim()),
+              uploadDate: serverTimestamp(),
+          };
+
+          addDocumentNonBlocking(collection(firestore, `families/${familyId}/photos`), photoData);
+      
+          toast({
+            title: "Memory Uploaded! 🎉",
+            description: "Your photo has been successfully added to the vault.",
+          });
+        }).catch((error) => {
+           console.error("Could not get download URL", error);
+           toast({
+                title: "Upload Failed",
+                description: "Could not finalize photo upload.",
+                variant: "destructive",
+            });
+        }).finally(() => {
+            setIsSubmitting(false);
+            setUploadProgress(null);
+        });
+      }
+    );
   }
 
   return (
@@ -115,6 +139,7 @@ export function UploadForm() {
                       field.onChange(e.target.files);
                       setFileName(e.target.files?.[0]?.name ?? "");
                     }}
+                    disabled={isSubmitting}
                   />
                   <div className="flex h-32 w-full flex-col items-center justify-center rounded-md border-2 border-dashed">
                     {fileName ? (
@@ -137,6 +162,14 @@ export function UploadForm() {
           )}
         />
         
+        {uploadProgress !== null && (
+            <div className="space-y-2">
+                <Label>Upload Progress</Label>
+                <Progress value={uploadProgress} />
+                <p className="text-sm text-muted-foreground">{Math.round(uploadProgress)}% complete</p>
+            </div>
+        )}
+
         <FormField
           control={form.control}
           name="note"
@@ -147,6 +180,7 @@ export function UploadForm() {
                 <Textarea
                   placeholder="Tell the story behind this photo..."
                   {...field}
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormMessage />
@@ -157,7 +191,7 @@ export function UploadForm() {
         <FormItem>
             <FormLabel>Voice Note (Optional)</FormLabel>
             <div className="flex items-center gap-4">
-                <Button type="button" variant="outline">
+                <Button type="button" variant="outline" disabled={isSubmitting}>
                     <Mic className="mr-2 h-4 w-4"/>
                     Record Voice Note
                 </Button>
@@ -178,7 +212,7 @@ export function UploadForm() {
             <FormItem>
               <FormLabel>Tags</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Birthday, Trip, Summer 2024" {...field} />
+                <Input placeholder="e.g. Birthday, Trip, Summer 2024" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormDescription>
                 Separate tags with commas. This helps in organizing your memories.
@@ -196,3 +230,5 @@ export function UploadForm() {
     </Form>
   )
 }
+
+    
