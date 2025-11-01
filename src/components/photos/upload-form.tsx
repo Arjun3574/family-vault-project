@@ -20,11 +20,12 @@ import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
 import { useState } from "react";
 import { useFirestore } from "@/firebase";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { collection, serverTimestamp } from "firebase/firestore";
+import { collection, serverTimestamp, addDoc } from "firebase/firestore";
 import { useAuthContext } from "@/contexts/auth-provider";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 
 const formSchema = z.object({
@@ -106,12 +107,30 @@ export function UploadForm() {
               uploadDate: serverTimestamp(),
           };
 
-          addDocumentNonBlocking(collection(firestore, `families/${familyId}/photos`), photoData);
+          const photosCollection = collection(firestore, `families/${familyId}/photos`);
+          addDoc(photosCollection, photoData)
+            .then(() => {
+                toast({
+                    title: "Memory Uploaded! 🎉",
+                    description: "Your photo has been successfully added to the vault.",
+                });
+            })
+            .catch(error => {
+                console.error("Failed to save photo metadata", error);
+                 errorEmitter.emit(
+                    'permission-error',
+                    new FirestorePermissionError({
+                      path: photosCollection.path,
+                      operation: 'create',
+                      requestResourceData: photoData,
+                    })
+                  )
+            })
+            .finally(() => {
+                setIsSubmitting(false);
+                setUploadProgress(null);
+            });
       
-          toast({
-            title: "Memory Uploaded! 🎉",
-            description: "Your photo has been successfully added to the vault.",
-          });
         }).catch((error) => {
            console.error("Could not get download URL", error);
            toast({
@@ -119,7 +138,6 @@ export function UploadForm() {
                 description: "Could not finalize photo upload.",
                 variant: "destructive",
             });
-        }).finally(() => {
             setIsSubmitting(false);
             setUploadProgress(null);
         });
