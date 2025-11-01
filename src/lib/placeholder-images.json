@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "1",
+      "description": "A happy family laughing together in a park.",
+      "imageUrl": "https://images.unsplash.com/photo-1530062845289-9109b2c9c868?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxmYW1pbHklMjBnYXRoZXJpbmd8ZW58MHx8fHwxNzYxOTg0ODM2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "family gathering"
+    },
+    {
+      "id": "2",
+      "description": "Kids blowing out candles on a birthday cake.",
+      "imageUrl": "https://images.unsplash.com/photo-1545696563-af8f6ec2295a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxiaXJ0aGRheSUyMGNha2V8ZW58MHx8fHwxNzYxOTE3ODUwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "birthday cake"
+    },
+    {
+      "id": "3",
+      "description": "A couple's wedding day.",
+      "imageUrl": "https://images.unsplash.com/photo-1621801306185-8c0ccf9c8eb8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx3ZWRkaW5nJTIwY291cGxlfGVufDB8fHx8MTc2MTg4MTUyMXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "wedding couple"
+    },
+    {
+      "id": "4",
+      "description": "Children playing with autumn leaves.",
+      "imageUrl": "https://images.unsplash.com/photo-1533222481259-ce20eda1e20b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxraWRzJTIwcGxheWluZ3xlbnwwfHx8fDE3NjE4NzM0NDZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "kids playing"
+    },
+    {
+      "id": "5",
+      "description": "Family vacation on a sunny beach.",
+      "imageUrl": "https://images.unsplash.com/photo-1661364119336-0b0cc8ab665a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHx2YWNhdGlvbiUyMGJlYWNofGVufDB8fHx8MTc2MTk4NDgzNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "vacation beach"
+    },
+    {
+      "id": "6",
+      "description": "Graduation day celebration.",
+      "imageUrl": "https://images.unsplash.com/photo-1707443882879-4b2988175167?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxncmFkdWF0aW9uJTIwY2VsZWJyYXRpb258ZW58MHx8fHwxNzYxOTg0ODM2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "graduation celebration"
+    },
+    {
+      "id": "7",
+      "description": "A quiet moment with a grandparent and grandchild reading a book.",
+      "imageUrl": "https://images.unsplash.com/photo-1549696360-748b8e33eab4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8ZmFtaWx5JTIwbW9tZW50fGVufDB8fHx8MTc2MTk4NDgzNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "family moment"
+    },
+    {
+      "id": "8",
+      "description": "Family gathered for a holiday dinner.",
+      "imageUrl": "https://images.unsplash.com/photo-1605926637512-c8b131444a4b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxob2xpZGF5JTIwZGlubmVyfGVufDB8fHx8MTc2MTkzMTkxMnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "holiday dinner"
+    }
+  ]
 }
