@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Copy, Loader2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, updateDoc, arrayUnion, collection, query, where, writeBatch, getDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, arrayUnion, collection, query, where, writeBatch, getDoc, serverTimestamp } from 'firebase/firestore';
 
 type Member = {
     id: string;
@@ -68,8 +68,14 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         // 1. Create the new family document
         batch.set(familyDocRef, newFamilyData);
         
-        // 2. Update the user's profile with the new family ID
-        batch.update(userProfileRef, { familyId: familyId });
+        // 2. Set (or update) the user's profile with the new family ID.
+        // This is crucial: it ensures the user is linked to the family.
+        batch.set(userProfileRef, { 
+            familyId: familyId,
+            id: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+        }, { merge: true });
 
         await batch.commit();
         
@@ -94,25 +100,22 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         const familyDocRef = doc(firestore, 'families', familyId);
         const userProfileRef = doc(firestore, 'userProfiles', user.uid);
 
-        // Check if family exists first
         const familySnap = await getDoc(familyDocRef);
         if (!familySnap.exists()) {
           throw new Error("Invalid Family ID. Please check and try again.");
         }
         const familyResult = { ...familySnap.data(), id: familySnap.id } as FamilyData;
 
-
         const batch = writeBatch(firestore);
 
         // 1. Add user's UID to the family's memberIds array
         batch.update(familyDocRef, { memberIds: arrayUnion(user.uid) });
 
-        // 2. Update the user's profile with the family ID
-        batch.update(userProfileRef, { familyId: familyId });
+        // 2. Set (or update) the user's profile with the new family ID.
+        batch.set(userProfileRef, { familyId: familyId }, { merge: true });
         
         await batch.commit();
         
-        // Optimistically update local state
         setFamilyData(familyResult);
         setHasFamily(true);
         toast({ title: 'Welcome to the Family!'});
