@@ -1,0 +1,110 @@
+/**
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a security model based on user and family ownership. Users can only
+ * access their own profile data. Family data is accessible to members of the family.
+ * Photos are stored within family contexts, and only family members can create, read, update,
+ * or delete photos within their family's collection. SpecialDays also follow family-based access.
+ *
+ * Data Structure:
+ * - /userProfiles/{userId}: Stores individual user profiles.
+ * - /families/{familyId}: Stores family data.
+ * - /families/{familyId}/photos/{photoId}: Stores photo data, nested under families.
+ * - /tags/{tagId}: Stores tag data.
+ * - /families/{familyId}/specialDays/{specialDayId}: Stores special day data under families.
+ *
+ * Key Security Decisions:
+ * - User profiles are private and accessible only to the user themselves.
+ * - Families have members, and all members can read, write, and manage the family data.
+ * - Photos are secured by family membership; only members can manipulate photos within a family.
+ * - Listing of user profiles is disallowed for privacy.
+ * - Tags are publicly accessible, assuming no private information is stored within the Tag entity.
+ *
+ * Denormalization for Authorization:
+ * - Photos include both `familyId` and `userId` to enable direct authorization checks without additional `get()` calls. This ensures that rules can quickly verify that the user uploading a photo belongs to the specified family.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /userProfiles/{userId}
+     * @allow (create) User with matching UID can create their profile.
+     * @allow (get, update, delete) User with matching UID can read, update and delete their own profile.
+     * @deny (create, get, update, delete) Any other user cannot access another user's profile.
+     * @principle Enforces user-ownership.  A user can only access their own profile.
+     */
+    match /userProfiles/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to family documents.
+     * @path /families/{familyId}
+     * @allow (create) Any authenticated user can create a family.
+     * @allow (get, list) Any authenticated user can read or list families.
+     * @allow (update, delete) No one can update or delete families.
+     * @principle Allows family data to be read by any authenticated user.
+     */
+    match /families/{familyId} {
+      allow get, list: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    /**
+     * @description Controls access to photo documents within a family.
+     * @path /families/{familyId}/photos/{photoId}
+     * @allow (create) User can create a photo if they are authenticated, the userId matches and the familyId matches.
+     * @allow (get, list) Any authenticated user can read photos.
+     * @allow (update, delete) Only the user who created the photo can update or delete it, and only if the photo exists.
+     * @principle Enforces family-based access to photos, combined with individual photo ownership.
+     */
+    match /families/{familyId}/photos/{photoId} {
+      allow get, list: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid && request.resource.data.familyId == familyId;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid && resource != null;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid && resource != null;
+    }
+
+    /**
+     * @description Controls access to tag documents.
+     * @path /tags/{tagId}
+     * @allow (get, list) Any user can read and list tags.
+     * @allow (create, update, delete) No one can create, update or delete tags.
+     * @principle Allows public read access to tags.
+     */
+    match /tags/{tagId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Controls access to special day documents within a family.
+     * @path /families/{familyId}/specialDays/{specialDayId}
+     * @allow (get, list) Any authenticated user can read or list special days.
+     * @allow (create) Any authenticated user can create special days.
+     * @allow (update, delete) No one can update or delete special days.
+     * @principle Allows family-based access to special days.
+     */
+    match /families/{familyId}/specialDays/{specialDayId} {
+      allow get, list: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,276 @@
+{
+  "entities": {
+    "Family": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Family",
+      "type": "object",
+      "description": "Represents a family group within the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the family."
+        },
+        "familyName": {
+          "type": "string",
+          "description": "Name of the family."
+        },
+        "memberIds": {
+          "type": "array",
+          "description": "References to UserProfiles who are members of this family. (Relationship: Family 1:N UserProfile)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "familyName"
+      ]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "familyId": {
+          "type": "string",
+          "description": "Reference to the Family this user belongs to. (Relationship: Family 1:N UserProfile)"
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's display name."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName",
+        "familyId"
+      ]
+    },
+    "Photo": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Photo",
+      "type": "object",
+      "description": "Represents a photo uploaded by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the photo."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who uploaded the photo. (Relationship: UserProfile 1:N Photo)"
+        },
+        "familyId": {
+          "type": "string",
+          "description": "Reference to the Family the photo belongs to. (Relationship: Family 1:N Photo)"
+        },
+        "storageUrl": {
+          "type": "string",
+          "description": "URL of the photo stored in Cloud Storage.",
+          "format": "uri"
+        },
+        "textNote": {
+          "type": "string",
+          "description": "Optional text note associated with the photo."
+        },
+        "voiceNoteUrl": {
+          "type": "string",
+          "description": "Optional URL of a voice note associated with the photo.",
+          "format": "uri"
+        },
+        "tagIds": {
+          "type": "array",
+          "description": "References to Tags associated with the photo. (Relationship: Photo N:N Tag)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "Date and time when the photo was uploaded.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "familyId",
+        "storageUrl",
+        "uploadDate"
+      ]
+    },
+    "Tag": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tag",
+      "type": "object",
+      "description": "Represents a tag that can be associated with photos.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tag."
+        },
+        "tagName": {
+          "type": "string",
+          "description": "Name of the tag."
+        },
+        "photoIds": {
+          "type": "array",
+          "description": "References to Photos associated with the tag. (Relationship: Photo N:N Tag)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "tagName"
+      ]
+    },
+    "SpecialDay": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SpecialDay",
+      "type": "object",
+      "description": "Represents a special day or milestone (birthday, anniversary).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the special day."
+        },
+        "familyId": {
+          "type": "string",
+          "description": "Reference to the Family the special day belongs to. (Relationship: Family 1:N SpecialDay)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the special day.",
+          "format": "date-time"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of special day (e.g., birthday, anniversary)."
+        },
+        "themeTemplate": {
+          "type": "string",
+          "description": "The LLM suggested theme template"
+        }
+      },
+      "required": [
+        "id",
+        "familyId",
+        "date",
+        "type"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/userProfiles/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile data.  The `userId` parameter is the Firebase Auth UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/families/{familyId}",
+        "definition": {
+          "entityName": "Family",
+          "schema": {
+            "$ref": "#/backend/entities/Family"
+          },
+          "description": "Stores family data.",
+          "params": [
+            {
+              "name": "familyId",
+              "description": "The unique identifier for the family."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/families/{familyId}/photos/{photoId}",
+        "definition": {
+          "entityName": "Photo",
+          "schema": {
+            "$ref": "#/backend/entities/Photo"
+          },
+          "description": "Stores photo data. Includes denormalized `familyId` and `userId` for authorization independence.",
+          "params": [
+            {
+              "name": "familyId",
+              "description": "The unique identifier for the family."
+            },
+            {
+              "name": "photoId",
+              "description": "The unique identifier for the photo."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tags/{tagId}",
+        "definition": {
+          "entityName": "Tag",
+          "schema": {
+            "$ref": "#/backend/entities/Tag"
+          },
+          "description": "Stores tag data.",
+          "params": [
+            {
+              "name": "tagId",
+              "description": "The unique identifier for the tag."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/families/{familyId}/specialDays/{specialDayId}",
+        "definition": {
+          "entityName": "SpecialDay",
+          "schema": {
+            "$ref": "#/backend/entities/SpecialDay"
+          },
+          "description": "Stores special day data related to a specific family.",
+          "params": [
+            {
+              "name": "familyId",
+              "description": "The unique identifier for the family."
+            },
+            {
+              "name": "specialDayId",
+              "description": "The unique identifier for the special day."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, support QAPs, and maintain data integrity. User profiles and families are stored in top-level collections (`userProfiles` and `families` respectively). Photos are stored in a subcollection under families (`/families/{familyId}/photos/{photoId}`) which simplifies security rules based on family membership. Each `Photo` document includes denormalized `familyId` and `userId`, allowing security rules to validate that the user uploading the photo is indeed a member of the family. SpecialDays are also stored under families (`/families/{familyId}/specialDays/{specialDayId}`) to ensure easy management and querying within the context of a family.  Tags are stored in a top-level collection and are related to Photos via the `tagIds` array stored on the Photo entity. This design achieves Authorization Independence by including all necessary authorization data within the Photo document, avoiding the need for `get()` calls in security rules. QAPs are supported through structural segregation; listing photos under a family inherently filters results to only those accessible to family members."
+  }
+}
