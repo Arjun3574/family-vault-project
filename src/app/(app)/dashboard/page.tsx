@@ -1,13 +1,15 @@
 'use client';
 import { PhotoGrid } from '@/components/photos/photo-grid';
-import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { Photo } from '@/components/photos/photo-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthContext } from '@/contexts/auth-provider';
+import { useCollection } from '@/firebase/firestore/use-collection';
 
 // Define a type for the Firestore photo document
 type FirestorePhoto = {
+  id: string;
   storageUrl: string;
   textNote: string;
   tagIds: string[];
@@ -37,7 +39,7 @@ export default function DashboardPage() {
     alt: p.textNote || 'A family memory',
     width: 1080, // Using a default width
     height: 1080, // Using a default height
-    description: p.textNote,
+    description: p.textNote || '',
     tags: p.tagIds || [],
     date: p.uploadDate?.toDate().toISOString() || new Date().toISOString(),
   })) : [];
