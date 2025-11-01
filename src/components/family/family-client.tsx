@@ -194,7 +194,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         <CardHeader>
           <CardTitle>Join an Existing Family</CardTitle>
           <CardDescription>Enter a Family ID to join a group.</CardDescription>
-        </Header>
+        </CardHeader>
         <form onSubmit={handleJoinFamily}>
             <CardContent>
                 <Label htmlFor="familyId">Family ID</Label>
