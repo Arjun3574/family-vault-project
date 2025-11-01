@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Copy, Loader2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, updateDoc, arrayUnion, collection, query, where, writeBatch, getDoc } from 'firebase/firestore';
+import { doc, collection, query, where, writeBatch, getDoc, arrayUnion } from 'firebase/firestore';
 
 type Member = {
     id: string;
@@ -68,8 +68,13 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         // 1. Create the new family document
         batch.set(familyDocRef, newFamilyData);
         
-        // 2. Update the user's profile with the new family ID.
-        batch.update(userProfileRef, { familyId: familyId });
+        // 2. Set the familyId on the user's profile. Use { merge: true } to create the profile if it doesn't exist, or update it if it does.
+        batch.set(userProfileRef, { 
+            familyId: familyId,
+            id: user.uid,
+            email: user.email,
+            displayName: user.displayName || userProfile.displayName
+         }, { merge: true });
 
         await batch.commit();
         
@@ -77,6 +82,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         setHasFamily(true);
         toast({ title: 'Family Created!', description: `Welcome to ${familyName}!` });
     } catch(e: any) {
+        console.error("Error creating family: ", e);
         toast({ title: 'Error', description: e.message || 'Could not create family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
@@ -105,8 +111,13 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         // 1. Add user's UID to the family's memberIds array
         batch.update(familyDocRef, { memberIds: arrayUnion(user.uid) });
 
-        // 2. Set (or update) the user's profile with the new family ID.
-        batch.update(userProfileRef, { familyId: familyId });
+        // 2. Set the familyId on the user's profile. Use { merge: true } to create the profile if it doesn't exist, or update it if it does.
+        batch.set(userProfileRef, { 
+            familyId: familyId,
+            id: user.uid,
+            email: user.email,
+            displayName: user.displayName || userProfile.displayName
+         }, { merge: true });
         
         await batch.commit();
         
@@ -114,6 +125,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         setHasFamily(true);
         toast({ title: 'Welcome to the Family!'});
     } catch (e: any) {
+        console.error("Error joining family: ", e);
         toast({ title: 'Error', description: e.message || 'Could not join family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
