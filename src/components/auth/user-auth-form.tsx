@@ -39,6 +39,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const userProfileSnap = await getDoc(userProfileRef);
 
     if (!userProfileSnap.exists()) {
+      // familyId is intentionally NOT set here. It's set when a user
+      // creates or joins a family in the FamilyClient component.
       await setDoc(userProfileRef, {
         id: user.uid,
         email: user.email,

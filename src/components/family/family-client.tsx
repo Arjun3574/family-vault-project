@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Copy, Loader2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, updateDoc, arrayUnion, collection, query, where, writeBatch, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, arrayUnion, collection, query, where, writeBatch, getDoc } from 'firebase/firestore';
 
 type Member = {
     id: string;
@@ -68,14 +68,8 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         // 1. Create the new family document
         batch.set(familyDocRef, newFamilyData);
         
-        // 2. Set (or update) the user's profile with the new family ID.
-        // This is crucial: it ensures the user is linked to the family.
-        batch.set(userProfileRef, { 
-            familyId: familyId,
-            id: user.uid,
-            displayName: user.displayName,
-            email: user.email,
-        }, { merge: true });
+        // 2. Update the user's profile with the new family ID.
+        batch.update(userProfileRef, { familyId: familyId });
 
         await batch.commit();
         
@@ -112,7 +106,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         batch.update(familyDocRef, { memberIds: arrayUnion(user.uid) });
 
         // 2. Set (or update) the user's profile with the new family ID.
-        batch.set(userProfileRef, { familyId: familyId }, { merge: true });
+        batch.update(userProfileRef, { familyId: familyId });
         
         await batch.commit();
         
@@ -200,7 +194,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         <CardHeader>
           <CardTitle>Join an Existing Family</CardTitle>
           <CardDescription>Enter a Family ID to join a group.</CardDescription>
-        </CardHeader>
+        </Header>
         <form onSubmit={handleJoinFamily}>
             <CardContent>
                 <Label htmlFor="familyId">Family ID</Label>
