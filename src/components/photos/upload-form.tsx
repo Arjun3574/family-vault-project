@@ -17,10 +17,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
-import { useState } from "react";
-import { useFirestore } from "@/firebase";
+import { useState, useMemo } from "react";
+import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { collection, serverTimestamp, addDoc } from "firebase/firestore";
+import { collection, serverTimestamp, addDoc, doc } from "firebase/firestore";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,10 @@ const formSchema = z.object({
   tags: z.string().min(1, "Add at least one tag."),
 });
 
+type UserProfile = {
+  familyId?: string;
+};
+
 export function UploadForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,6 +46,13 @@ export function UploadForm() {
   const { user } = useAuthContext();
   const firestore = useFirestore();
   const storage = getStorage();
+  
+  const userProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'userProfiles', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,8 +65,10 @@ export function UploadForm() {
   const photoRef = form.register("photo");
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !firestore) {
-        toast({ title: "Authentication error", description: "You must be logged in to upload photos.", variant: "destructive" });
+    const familyId = userProfile?.familyId;
+
+    if (!user || !firestore || !familyId) {
+        toast({ title: "Authentication or Family ID error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
         return;
     }
 
@@ -71,7 +84,6 @@ export function UploadForm() {
     const storageRef = ref(storage, `photos/${user.uid}/${Date.now()}_${photoFile.name}`);
     const uploadTask = uploadBytesResumable(storageRef, photoFile);
     
-    // Optimistic UI update
     toast({
       title: "Uploading Memory...",
       description: "Your photo is being added to the vault.",
@@ -96,14 +108,12 @@ export function UploadForm() {
       }, 
       () => {
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          const familyId = "default-family"; 
-
           const photoData = {
               userId: user.uid,
               familyId: familyId,
               storageUrl: downloadURL,
               textNote: values.note,
-              tagIds: values.tags.split(',').map(tag => tag.trim()),
+              tagIds: values.tags.split(',').map(tag => tag.trim().toLowerCase()),
               uploadDate: serverTimestamp(),
           };
 
@@ -248,7 +258,7 @@ export function UploadForm() {
           )}
         />
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button type="submit" disabled={isSubmitting || !userProfile?.familyId} className="w-full">
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

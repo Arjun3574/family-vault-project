@@ -4,79 +4,115 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Copy, Loader2 } from 'lucide-react';
+import { Copy, Loader2, Users } from 'lucide-react';
+import { useAuthContext } from '@/contexts/auth-provider';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, setDoc, updateDoc, arrayUnion, collection, query, where, writeBatch } from 'firebase/firestore';
 
 type Member = {
     id: string;
-    name: string;
-    role: string;
-    avatar: string;
+    displayName: string;
+    email: string;
 };
 
 type FamilyData = {
     id: string;
-    name: string;
-    members: Member[];
+    familyName: string;
+    memberIds: string[];
 } | null;
 
 interface FamilyClientProps {
     initialHasFamily: boolean;
     initialFamilyData: FamilyData;
+    userProfile: any;
 }
 
-export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClientProps) {
+export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile }: FamilyClientProps) {
   const [hasFamily, setHasFamily] = useState(initialHasFamily);
   const [familyData, setFamilyData] = useState<FamilyData>(initialFamilyData);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuthContext();
+  const firestore = useFirestore();
+
+  const membersQuery = useMemoFirebase(() => {
+    if (!firestore || !familyData?.memberIds || familyData.memberIds.length === 0) return null;
+    return query(collection(firestore, 'userProfiles'), where('id', 'in', familyData.memberIds));
+  }, [firestore, familyData]);
+
+  const { data: members, isLoading: membersLoading } = useCollection<Member>(membersQuery);
 
   const handleCreateFamily = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!user || !firestore) return;
+
     setIsLoading(true);
     const familyName = (event.currentTarget.elements.namedItem('familyName') as HTMLInputElement).value;
     
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const newFamilyData: FamilyData = {
-        id: `FAM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-        name: familyName,
-        members: [{ id: "1", name: "You", role: "Admin", avatar: "https://i.pravatar.cc/150?u=alexdoe" }],
-    };
-    
-    setFamilyData(newFamilyData);
-    setHasFamily(true);
-    setIsLoading(false);
-    toast({ title: 'Family Created!', description: `Welcome to ${familyName}!` });
+    try {
+        const familyDocRef = doc(collection(firestore, 'families'));
+        const familyId = familyDocRef.id;
+
+        const newFamilyData = {
+            id: familyId,
+            familyName: familyName,
+            memberIds: [user.uid]
+        };
+
+        const userProfileRef = doc(firestore, 'userProfiles', user.uid);
+        
+        const batch = writeBatch(firestore);
+        batch.set(familyDocRef, newFamilyData);
+        batch.set(userProfileRef, {
+            id: user.uid,
+            displayName: user.displayName || 'New User',
+            email: user.email,
+            familyId: familyId,
+        }, { merge: true });
+
+        await batch.commit();
+        
+        setFamilyData(newFamilyData);
+        setHasFamily(true);
+        toast({ title: 'Family Created!', description: `Welcome to ${familyName}!` });
+    } catch(e: any) {
+        toast({ title: 'Error', description: e.message || 'Could not create family.', variant: 'destructive' });
+    } finally {
+        setIsLoading(false);
+    }
   };
   
   const handleJoinFamily = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!user || !firestore) return;
+
     setIsLoading(true);
     const familyId = (event.currentTarget.elements.namedItem('familyId') as HTMLInputElement).value;
     
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    if (familyId.toUpperCase() === 'FAM-DEMO123') {
-        const joinedFamily: FamilyData = {
-             id: familyId.toUpperCase(),
-             name: "The Demo Family",
-             members: [
-                { id: "1", name: "John Demo", role: "Admin", avatar: "https://i.pravatar.cc/150?u=johndemo" },
-                { id: "2", name: "You", role: "Member", avatar: "https://i.pravatar.cc/150?u=alexdoe" },
-            ],
-        };
-        setFamilyData(joinedFamily);
-        setHasFamily(true);
-        toast({ title: 'Welcome to the Family!', description: `You've joined ${joinedFamily.name}!` });
-    } else {
-        toast({ title: 'Error', description: 'Invalid Family ID.', variant: 'destructive' });
+    try {
+        const familyDocRef = doc(firestore, 'families', familyId);
+        const userProfileRef = doc(firestore, 'userProfiles', user.uid);
+
+        const batch = writeBatch(firestore);
+        batch.update(familyDocRef, { memberIds: arrayUnion(user.uid) });
+        batch.set(userProfileRef, {
+             id: user.uid,
+            displayName: user.displayName || 'New User',
+            email: user.email,
+            familyId: familyId,
+        }, { merge: true });
+        
+        await batch.commit();
+        
+        setHasFamily(true); // This will trigger a re-render and the parent will fetch the new family data
+        toast({ title: 'Welcome to the Family!'});
+    } catch (e: any) {
+        toast({ title: 'Error', description: 'Invalid Family ID or an error occurred.', variant: 'destructive' });
+    } finally {
+        setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const copyToClipboard = () => {
@@ -90,7 +126,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClie
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">{familyData.name}</CardTitle>
+                <CardTitle className="font-headline text-2xl">{familyData.familyName}</CardTitle>
                 <CardDescription>Your family's private space.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -107,16 +143,17 @@ export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClie
                 <div>
                     <h3 className="text-lg font-semibold">Members</h3>
                     <div className="mt-2 space-y-4">
-                        {familyData.members.map(member => (
+                        {membersLoading && <div>Loading members...</div>}
+                        {members && members.map(member => (
                             <div key={member.id} className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <Avatar>
-                                        <AvatarImage src={member.avatar} />
-                                        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${member.email}`} />
+                                        <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p className="font-medium">{member.name}</p>
-                                        <p className="text-sm text-muted-foreground">{member.role}</p>
+                                        <p className="font-medium">{member.displayName}</p>
+                                        <p className="text-sm text-muted-foreground">{member.email}</p>
                                     </div>
                                 </div>
                             </div>
@@ -124,9 +161,6 @@ export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClie
                     </div>
                 </div>
             </CardContent>
-            <CardFooter>
-                 <Button variant="default">Invite Members</Button>
-            </CardFooter>
         </Card>
     )
   }

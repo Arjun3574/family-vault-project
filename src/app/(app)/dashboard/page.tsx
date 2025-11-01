@@ -1,13 +1,12 @@
 'use client';
 import { PhotoGrid } from '@/components/photos/photo-grid';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, Timestamp, doc } from 'firebase/firestore';
 import { Photo } from '@/components/photos/photo-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useCollection } from '@/firebase/firestore/use-collection';
 
-// Define a type for the Firestore photo document
 type FirestorePhoto = {
   id: string;
   storageUrl: string;
@@ -16,12 +15,22 @@ type FirestorePhoto = {
   uploadDate: Timestamp;
 };
 
+type UserProfile = {
+  familyId?: string;
+};
+
 export default function DashboardPage() {
   const { user } = useAuthContext();
   const firestore = useFirestore();
 
-  // TODO: Replace with dynamic familyId from user profile
-  const familyId = "default-family"; 
+  const userProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'userProfiles', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile, isLoading: isUserLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const familyId = userProfile?.familyId;
 
   const photosQuery = useMemoFirebase(() => {
     if (!firestore || !familyId) return null;
@@ -31,20 +40,20 @@ export default function DashboardPage() {
     );
   }, [firestore, familyId]);
 
-  const { data: photosData, isLoading } = useCollection<FirestorePhoto>(photosQuery);
+  const { data: photosData, isLoading: isPhotosLoading } = useCollection<FirestorePhoto>(photosQuery);
 
   const photos: Photo[] = photosData ? photosData.map(p => ({
     id: p.id,
     src: p.storageUrl,
     alt: p.textNote || 'A family memory',
-    width: 1080, // Using a default width
-    height: 1080, // Using a default height
+    width: 1080,
+    height: 1080,
     description: p.textNote || '',
     tags: p.tagIds || [],
     date: p.uploadDate?.toDate().toISOString() || new Date().toISOString(),
   })) : [];
   
-  if (isLoading) {
+  if (isUserLoading || isPhotosLoading) {
     return (
         <div className="container mx-auto">
             <div className="mb-8 space-y-2">

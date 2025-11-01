@@ -6,19 +6,22 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  User,
 } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth as useFirebaseAuth } from '@/firebase';
+import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const auth = useFirebaseAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState<boolean>(false);
@@ -28,6 +31,21 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
   const [signUpEmail, setSignUpEmail] = React.useState('');
   const [signUpPassword, setSignUpPassword] = React.useState('');
+  const [signUpName, setSignUpName] = React.useState('');
+
+  const createUserProfile = async (user: User) => {
+    if (!firestore) return;
+    const userProfileRef = doc(firestore, 'userProfiles', user.uid);
+    const userProfileSnap = await getDoc(userProfileRef);
+
+    if (!userProfileSnap.exists()) {
+      await setDoc(userProfileRef, {
+        id: user.uid,
+        email: user.email,
+        displayName: user.displayName || signUpName,
+      });
+    }
+  };
 
   async function onLogin(event: React.SyntheticEvent) {
     event.preventDefault();
@@ -49,7 +67,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     event.preventDefault();
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword);
+      const userCredential = await createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword);
+      await createUserProfile(userCredential.user);
     } catch (error: any) {
       toast({
         title: 'Sign-up Failed',
@@ -65,7 +84,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const userCredential = await signInWithPopup(auth, provider);
+      await createUserProfile(userCredential.user);
     } catch (error: any) {
       toast({
         title: 'Google Sign-In Failed',
@@ -138,6 +158,19 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         <TabsContent value="signup">
            <form onSubmit={onSignUp} className="mt-4">
             <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="signup-name">Full Name</Label>
+                <Input
+                  id="signup-name"
+                  placeholder="John Doe"
+                  type="text"
+                  autoCapitalize="words"
+                  autoCorrect="off"
+                  disabled={isLoading || isGoogleLoading}
+                  value={signUpName}
+                  onChange={(e) => setSignUpName(e.target.value)}
+                />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="signup-email">Email</Label>
                 <Input
