@@ -20,10 +20,11 @@ import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
 import { useState } from "react";
 import { useFirestore } from "@/firebase";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, serverTimestamp } from "firebase/firestore";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
 
 
 const formSchema = z.object({
@@ -57,19 +58,26 @@ export function UploadForm() {
         return;
     }
 
-    setIsSubmitting(true);
     const photoFile = values.photo[0];
+    if (!photoFile) {
+        toast({ title: "No photo selected", description: "Please select a photo to upload.", variant: "destructive" });
+        return;
+    }
+
+    setIsSubmitting(true);
+    setUploadProgress(0);
+
     const storageRef = ref(storage, `photos/${user.uid}/${Date.now()}_${photoFile.name}`);
     const uploadTask = uploadBytesResumable(storageRef, photoFile);
     
-    // Give immediate feedback
+    // Optimistic UI update
     toast({
-      title: "Uploading Memory! 🎉",
-      description: "Your photo is being added to the vault in the background.",
+      title: "Uploading Memory...",
+      description: "Your photo is being added to the vault.",
     });
     form.reset();
     setFileName("");
-
+    
     uploadTask.on('state_changed', 
       (snapshot) => {
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -223,12 +231,16 @@ export function UploadForm() {
         />
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Add to Vault
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+           "Add to Vault"
+          )}
         </Button>
       </form>
     </Form>
   )
 }
-
-    
