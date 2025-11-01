@@ -5,16 +5,22 @@ export default function DashboardPage() {
 
   // In a real application, you would fetch photos from Firestore here.
   // For this demo, we'll use placeholder images.
-  const photos = PlaceHolderImages.map(p => ({
-    id: p.id,
-    src: p.imageUrl,
-    alt: p.description,
-    width: parseInt(p.imageUrl.split('/')[5]),
-    height: parseInt(p.imageUrl.split('/')[6]),
-    description: p.description,
-    tags: p.imageHint.split(' '),
-    date: new Date(Date.now() - Math.random() * 31536000000).toISOString(), // Random date in the last year
-  }));
+  const photos = PlaceHolderImages.map(p => {
+    const url = new URL(p.imageUrl);
+    const width = parseInt(url.searchParams.get('w') || '1080');
+    const height = parseInt(url.searchParams.get('h') || '1080');
+    
+    return {
+      id: p.id,
+      src: p.imageUrl,
+      alt: p.description,
+      width: width,
+      height: height,
+      description: p.description,
+      tags: p.imageHint.split(' '),
+      date: new Date(Date.now() - Math.random() * 31536000000).toISOString(), // Random date in the last year
+    }
+  });
   
   return (
     <div className="container mx-auto">
