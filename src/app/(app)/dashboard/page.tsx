@@ -1,10 +1,18 @@
 'use client';
 import { PhotoGrid } from '@/components/photos/photo-grid';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { Photo } from '@/components/photos/photo-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthContext } from '@/contexts/auth-provider';
+
+// Define a type for the Firestore photo document
+type FirestorePhoto = {
+  storageUrl: string;
+  textNote: string;
+  tagIds: string[];
+  uploadDate: Timestamp;
+};
 
 export default function DashboardPage() {
   const { user } = useAuthContext();
@@ -21,17 +29,17 @@ export default function DashboardPage() {
     );
   }, [firestore, familyId]);
 
-  const { data: photosData, isLoading } = useCollection<Omit<Photo, 'id' | 'width' | 'height' | 'alt' | 'tags' | 'date'> & { storageUrl: string; textNote: string; tagIds: string[]; uploadDate: { toDate: () => Date} }>(photosQuery);
+  const { data: photosData, isLoading } = useCollection<FirestorePhoto>(photosQuery);
 
   const photos: Photo[] = photosData ? photosData.map(p => ({
     id: p.id,
     src: p.storageUrl,
     alt: p.textNote || 'A family memory',
-    width: 1080, // Default width, can be adjusted
-    height: 1080, // Default height
+    width: 1080, // Using a default width
+    height: 1080, // Using a default height
     description: p.textNote,
     tags: p.tagIds || [],
-    date: p.uploadDate.toDate().toISOString(),
+    date: p.uploadDate?.toDate().toISOString() || new Date().toISOString(),
   })) : [];
   
   if (isLoading) {
