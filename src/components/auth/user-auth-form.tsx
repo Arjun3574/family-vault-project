@@ -7,6 +7,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   User,
+  updateProfile,
 } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [signUpPassword, setSignUpPassword] = React.useState('');
   const [signUpName, setSignUpName] = React.useState('');
 
-  const createUserProfile = async (user: User) => {
+  const createUserProfile = async (user: User, displayName?: string) => {
     if (!firestore) return;
     const userProfileRef = doc(firestore, 'userProfiles', user.uid);
     const userProfileSnap = await getDoc(userProfileRef);
@@ -44,7 +45,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       await setDoc(userProfileRef, {
         id: user.uid,
         email: user.email,
-        displayName: user.displayName || signUpName,
+        displayName: user.displayName || displayName,
       });
     }
   };
@@ -70,7 +71,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword);
-      await createUserProfile(userCredential.user);
+      await updateProfile(userCredential.user, { displayName: signUpName });
+      await createUserProfile(userCredential.user, signUpName);
     } catch (error: any) {
       toast({
         title: 'Sign-up Failed',

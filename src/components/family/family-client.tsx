@@ -65,15 +65,13 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         
         const batch = writeBatch(firestore);
         
-        // 1. Create the new family document
         batch.set(familyDocRef, newFamilyData);
         
-        // 2. Set the familyId on the user's profile. Use { merge: true } to create the profile if it doesn't exist, or update it if it does.
         batch.set(userProfileRef, { 
             familyId: familyId,
             id: user.uid,
             email: user.email,
-            displayName: user.displayName || userProfile.displayName
+            displayName: user.displayName || 'New User'
          }, { merge: true });
 
         await batch.commit();
@@ -108,15 +106,13 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
 
         const batch = writeBatch(firestore);
 
-        // 1. Add user's UID to the family's memberIds array
         batch.update(familyDocRef, { memberIds: arrayUnion(user.uid) });
 
-        // 2. Set the familyId on the user's profile. Use { merge: true } to create the profile if it doesn't exist, or update it if it does.
         batch.set(userProfileRef, { 
             familyId: familyId,
             id: user.uid,
             email: user.email,
-            displayName: user.displayName || userProfile.displayName
+            displayName: user.displayName || 'New User'
          }, { merge: true });
         
         await batch.commit();
