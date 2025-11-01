@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Copy, Loader2, Users } from 'lucide-react';
+import { Copy, Loader2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, updateDoc, arrayUnion, collection, query, where, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, arrayUnion, collection, query, where, writeBatch, getDoc } from 'firebase/firestore';
 
 type Member = {
     id: string;
@@ -64,13 +64,12 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         const userProfileRef = doc(firestore, 'userProfiles', user.uid);
         
         const batch = writeBatch(firestore);
+        
+        // 1. Create the new family document
         batch.set(familyDocRef, newFamilyData);
-        batch.set(userProfileRef, {
-            id: user.uid,
-            displayName: user.displayName || 'New User',
-            email: user.email,
-            familyId: familyId,
-        }, { merge: true });
+        
+        // 2. Update the user's profile with the new family ID
+        batch.update(userProfileRef, { familyId: familyId });
 
         await batch.commit();
         
@@ -95,21 +94,30 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         const familyDocRef = doc(firestore, 'families', familyId);
         const userProfileRef = doc(firestore, 'userProfiles', user.uid);
 
+        // Check if family exists first
+        const familySnap = await getDoc(familyDocRef);
+        if (!familySnap.exists()) {
+          throw new Error("Invalid Family ID. Please check and try again.");
+        }
+        const familyResult = { ...familySnap.data(), id: familySnap.id } as FamilyData;
+
+
         const batch = writeBatch(firestore);
+
+        // 1. Add user's UID to the family's memberIds array
         batch.update(familyDocRef, { memberIds: arrayUnion(user.uid) });
-        batch.set(userProfileRef, {
-             id: user.uid,
-            displayName: user.displayName || 'New User',
-            email: user.email,
-            familyId: familyId,
-        }, { merge: true });
+
+        // 2. Update the user's profile with the family ID
+        batch.update(userProfileRef, { familyId: familyId });
         
         await batch.commit();
         
-        setHasFamily(true); // This will trigger a re-render and the parent will fetch the new family data
+        // Optimistically update local state
+        setFamilyData(familyResult);
+        setHasFamily(true);
         toast({ title: 'Welcome to the Family!'});
     } catch (e: any) {
-        toast({ title: 'Error', description: 'Invalid Family ID or an error occurred.', variant: 'destructive' });
+        toast({ title: 'Error', description: e.message || 'Could not join family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
     }
@@ -193,7 +201,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         <form onSubmit={handleJoinFamily}>
             <CardContent>
                 <Label htmlFor="familyId">Family ID</Label>
-                <Input id="familyId" name="familyId" placeholder="FAM-..." required />
+                <Input id="familyId" name="familyId" placeholder="Enter a valid Family ID" required />
             </CardContent>
             <CardFooter>
                 <Button type="submit" disabled={isLoading}>
