@@ -22,6 +22,7 @@ import { useAuth, useFirestore } from "@/firebase";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuthContext } from "@/contexts/auth-provider";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 const formSchema = z.object({
@@ -65,7 +66,7 @@ export function UploadForm() {
         // TODO: This assumes the user has a family. In a real app, you'd get this from the user's profile.
         const familyId = "default-family"; 
 
-        await addDoc(collection(firestore, `families/${familyId}/photos`), {
+        addDocumentNonBlocking(collection(firestore, `families/${familyId}/photos`), {
             userId: user.uid,
             familyId: familyId,
             storageUrl: downloadURL,

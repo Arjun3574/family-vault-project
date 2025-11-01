@@ -24,6 +24,10 @@ const rotations = ['rotate-1', '-rotate-2', 'rotate-2', '-rotate-1', 'rotate-3']
 
 export function PhotoCard({ photo, index }: PhotoCardProps) {
   const rotation = rotations[index % rotations.length];
+  
+  // Ensure width and height are numbers, providing a default if they are not.
+  const imageWidth = typeof photo.width === 'number' && !isNaN(photo.width) ? photo.width : 500;
+  const imageHeight = typeof photo.height === 'number' && !isNaN(photo.height) ? photo.height : 500;
 
   return (
     <div className={cn("break-inside-avoid animate-in fade-in-50 duration-500", rotation)}>
@@ -32,8 +36,8 @@ export function PhotoCard({ photo, index }: PhotoCardProps) {
           <Image
             src={photo.src}
             alt={photo.alt}
-            width={photo.width}
-            height={photo.height}
+            width={imageWidth}
+            height={imageHeight}
             className="object-cover"
             data-ai-hint={photo.tags.join(' ')}
           />
