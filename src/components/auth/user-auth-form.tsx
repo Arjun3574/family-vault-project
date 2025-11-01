@@ -29,20 +29,21 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     setIsLoading(true);
 
     try {
-      // First, try to sign in. If it fails, try to sign up.
       await signInWithEmailAndPassword(auth, email, password);
     } catch (signInError: any) {
-      if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/wrong-password') {
+      if (signInError.code === 'auth/user-not-found') {
+        // If user does not exist, create a new account
         try {
           await createUserWithEmailAndPassword(auth, email, password);
         } catch (signUpError: any) {
           toast({
-            title: 'Authentication Failed',
+            title: 'Sign-up Failed',
             description: signUpError.message,
             variant: 'destructive',
           });
         }
       } else {
+        // For other sign-in errors (like wrong password), show an error
         toast({
           title: 'Authentication Failed',
           description: signInError.message,
