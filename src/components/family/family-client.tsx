@@ -71,7 +71,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
             familyId: familyId,
             id: user.uid,
             email: user.email,
-            displayName: user.displayName || userProfile?.displayName || "New User"
+            displayName: user.displayName || "New User"
          }, { merge: true });
 
         await batch.commit();
@@ -112,7 +112,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
             familyId: familyId,
             id: user.uid,
             email: user.email,
-            displayName: user.displayName || userProfile?.displayName || 'New User'
+            displayName: user.displayName || 'New User'
          }, { merge: true });
         
         await batch.commit();

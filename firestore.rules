@@ -31,11 +31,13 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile documents.
      * @path /userProfiles/{userId}
-     * @allow (create, get, update, delete) User with matching UID can read, write, and delete their own profile.
+     * @allow (create) Any authenticated user can create a profile.
+     * @allow (get, update, delete) User with matching UID can read, write, and delete their own profile.
      * @deny Any other user cannot access another user's profile.
      * @principle Enforces user-ownership. A user can only access their own profile.
      */
     match /userProfiles/{userId} {
+      allow create: if request.auth != null;
       allow read, write, delete: if request.auth.uid == userId;
       allow list: if false;
     }
