@@ -31,46 +31,31 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile documents.
      * @path /userProfiles/{userId}
-     * @allow (create) Any authenticated user can create a profile.
-     * @allow (get, update, delete) User with matching UID can read, write, and delete their own profile.
-     * @allow (list) A user can list other user profiles only if they belong to a family.
-     * @principle Enforces user-ownership and family-based profile listing.
+     * @allow (read, write) Any authenticated user can read or write to any user profile for the prototype.
+     * @principle Open access for authenticated users for prototyping.
      */
     match /userProfiles/{userId} {
-      allow create: if request.auth != null;
-      allow read, write, delete: if request.auth.uid == userId;
-      allow list: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId != null;
+      allow read, write: if request.auth != null;
     }
 
     /**
      * @description Controls access to family documents.
      * @path /families/{familyId}
-     * @allow (create) Any authenticated user can create a family.
-     * @allow (get, list) Any authenticated user can read or list families.
-     * @allow (update) Users can update a family document (e.g. to join).
-     * @allow (delete) No one can delete families.
-     * @principle Allows family data to be read by any authenticated user and updated by members.
+     * @allow (read, write) Any authenticated user can read or write family data for the prototype.
+     * @principle Open access for authenticated users for prototyping.
      */
     match /families/{familyId} {
-      allow get, list: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if false;
+      allow read, write: if request.auth != null;
     }
 
     /**
      * @description Controls access to photo documents within a family.
      * @path /families/{familyId}/photos/{photoId}
-     * @allow (create) User can create a photo if they are authenticated, the userId matches and the familyId matches.
-     * @allow (get, list) Any authenticated user can read photos.
-     * @allow (update, delete) Only the user who created the photo can update or delete it, and only if the photo exists.
-     * @principle Enforces family-based access to photos, combined with individual photo ownership.
+     * @allow (read, write) Any authenticated user can read or write photos for the prototype.
+     * @principle Open access for authenticated users for prototyping.
      */
     match /families/{familyId}/photos/{photoId} {
-      allow get, list: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid && request.resource.data.familyId == familyId;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+       allow read, write: if request.auth != null;
     }
 
     /**
@@ -88,15 +73,11 @@ service cloud.firestore {
     /**
      * @description Controls access to special day documents within a family.
      * @path /families/{familyId}/specialDays/{specialDayId}
-     * @allow (get, list) Any authenticated user can read or list special days.
-     * @allow (create) Any authenticated user can create special days.
-     * @allow (update, delete) No one can update or delete special days.
-     * @principle Allows family-based access to special days.
+     * @allow (read, write) Any authenticated user can read or write special days for the prototype.
+     * @principle Open access for authenticated users for prototyping.
      */
     match /families/{familyId}/specialDays/{specialDayId} {
-      allow get, list: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if false;
+      allow read, write: if request.auth != null;
     }
   }
 }
