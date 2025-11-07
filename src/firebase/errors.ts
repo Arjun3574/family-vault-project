@@ -1,4 +1,5 @@
-'use client';
+// This file can be used on both client and server.
+// We remove 'use client' to allow server-side usage.
 import { getAuth, type User } from 'firebase/auth';
 
 type SecurityRuleContext = {
@@ -78,6 +79,9 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   let authObject: FirebaseAuthObject | null = null;
   try {
     // Safely attempt to get the current user.
+    // This will only work on the client where auth state is readily available.
+    // On the server, we'd need to pass the user token. For this prototype,
+    // we'll accept that the auth object might be null when thrown from the server.
     const firebaseAuth = getAuth();
     const currentUser = firebaseAuth.currentUser;
     if (currentUser) {
@@ -102,7 +106,16 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
  * @returns A string containing the error message and the JSON payload.
  */
 function buildErrorMessage(requestObject: SecurityRuleRequest): string {
-  return `Missing or insufficient permissions: The following request was denied by Firestore Security Rules:
+  // We remove the date from the resource data to avoid noisy diffs.
+  if (requestObject.resource?.data?.uploadDate) {
+    delete requestObject.resource.data.uploadDate;
+  }
+   if (requestObject.resource?.data?.createdAt) {
+    delete requestObject.resource.data.createdAt;
+  }
+
+
+  return `FirestoreError: Missing or insufficient permissions: The following request was denied by Firestore Security Rules:
 ${JSON.stringify(requestObject, null, 2)}`;
 }
 

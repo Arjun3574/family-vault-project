@@ -27,9 +27,10 @@ type FamilyData = {
 interface FamilyClientProps {
     initialHasFamily: boolean;
     initialFamilyData: FamilyData;
+    userProfile: any;
 }
 
-export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClientProps) {
+export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile }: FamilyClientProps) {
   const [hasFamily, setHasFamily] = useState(initialHasFamily);
   const [familyData, setFamilyData] = useState<FamilyData>(initialFamilyData);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +40,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClie
 
   const membersQuery = useMemoFirebase(() => {
     if (!firestore || !familyData?.memberIds || familyData.memberIds.length === 0) return null;
+    // Firestore 'in' queries are limited to 30 elements in the array.
     return query(collection(firestore, 'userProfiles'), where('id', 'in', familyData.memberIds.slice(0, 30)));
   }, [firestore, familyData]);
 
@@ -52,7 +54,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClie
     const familyName = (event.currentTarget.elements.namedItem('familyName') as HTMLInputElement).value;
     
     try {
-        const familyId = await createFamilyAtomic(user.uid, familyName);
+        const familyId = await createFamilyAtomic(user.uid, familyName, user.displayName || '', user.email || '');
         
         setFamilyData({
             id: familyId,
@@ -63,7 +65,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClie
         toast({ title: 'Family Created!', description: `Welcome to ${familyName}!` });
     } catch(e: any) {
         console.error("Error creating family: ", e);
-        toast({ title: 'Error', description: e.message || 'Could not create family.', variant: 'destructive' });
+        toast({ title: 'Error Creating Family', description: e.message || 'Could not create family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
     }
@@ -84,7 +86,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClie
         toast({ title: 'Welcome to the Family!'});
     } catch (e: any) {
         console.error("Error joining family: ", e);
-        toast({ title: 'Error', description: e.message || 'Could not join family.', variant: 'destructive' });
+        toast({ title: 'Error Joining Family', description: e.message || 'Could not join family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
     }
@@ -124,7 +126,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData }: FamilyClie
                                 <div className="flex items-center gap-4">
                                     <Avatar>
                                         <AvatarImage src={`https://i.pravatar.cc/150?u=${member.email}`} />
-                                        <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
+                                        <AvatarFallback>{member.displayName?.charAt(0) || 'U'}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <p className="font-medium">{member.displayName}</p>
