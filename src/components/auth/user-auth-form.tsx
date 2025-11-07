@@ -45,7 +45,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       await setDoc(userProfileRef, {
         id: user.uid,
         email: user.email,
-        displayName: user.displayName || displayName,
+        displayName: user.displayName || displayName || 'New User',
       });
     }
   };
@@ -54,7 +54,9 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     event.preventDefault();
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      // Ensure profile exists on login as well, in case it was missed during signup
+      await createUserProfile(userCredential.user);
     } catch (error: any) {
       toast({
         title: 'Authentication Failed',

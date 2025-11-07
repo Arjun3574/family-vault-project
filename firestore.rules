@@ -1,82 +1,22 @@
 /**
  * @fileoverview Firestore Security Rules for the application.
  *
- * Core Philosophy:
- * This ruleset enforces a security model based on user and family ownership. Users can only
- * access their own profile data. Family data is accessible to members of the family.
- * Photos are stored within family contexts, and only family members can create, read, update,
- * or delete photos within their family's collection. SpecialDays also follow family-based access.
- *
- * Data Structure:
- * - /userProfiles/{userId}: Stores individual user profiles.
- * - /families/{familyId}: Stores family data.
- * - /families/{familyId}/photos/{photoId}: Stores photo data, nested under families.
- * - /tags/{tagId}: Stores tag data.
- * - /families/{familyId}/specialDays/{specialDayId}: Stores special day data under families.
- *
- * Key Security Decisions:
- * - User profiles are private and accessible only to the user themselves.
- * - Families have members, and all members can read, write, and manage the family data.
- * - Photos are secured by family membership; only members can manipulate photos within a family.
- * - Listing of user profiles is disallowed for privacy unless for fetching family members.
- * - Tags are publicly accessible, assuming no private information is stored within the Tag entity.
- *
- * Denormalization for Authorization:
- * - Photos include both `familyId` and `userId` to enable direct authorization checks without additional `get()` calls. This ensures that rules can quickly verify that the user uploading a photo belongs to the specified family.
+ * For prototyping purposes, these rules have been simplified to allow any authenticated
+ * user to perform read and write operations across the database. This is NOT suitable
+ * for a production environment but ensures the prototype is fully functional without
+ * being blocked by restrictive security policies.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile documents.
-     * @path /userProfiles/{userId}
-     * @allow (read, write) Any authenticated user can read or write to any user profile for the prototype.
-     * @principle Open access for authenticated users for prototyping.
+     * @description Controls access to all documents in the database.
+     * @path /{document=**}
+     * @allow (read, write) Any authenticated user can read or write any data.
+     * @principle Open access for any authenticated user for prototyping.
      */
-    match /userProfiles/{userId} {
-      allow read, write: if request.auth != null;
-    }
-
-    /**
-     * @description Controls access to family documents.
-     * @path /families/{familyId}
-     * @allow (read, write) Any authenticated user can read or write family data for the prototype.
-     * @principle Open access for authenticated users for prototyping.
-     */
-    match /families/{familyId} {
-      allow read, write: if request.auth != null;
-    }
-
-    /**
-     * @description Controls access to photo documents within a family.
-     * @path /families/{familyId}/photos/{photoId}
-     * @allow (read, write) Any authenticated user can read or write photos for the prototype.
-     * @principle Open access for authenticated users for prototyping.
-     */
-    match /families/{familyId}/photos/{photoId} {
-       allow read, write: if request.auth != null;
-    }
-
-    /**
-     * @description Controls access to tag documents.
-     * @path /tags/{tagId}
-     * @allow (get, list) Any user can read and list tags.
-     * @allow (create, update, delete) No one can create, update or delete tags.
-     * @principle Allows public read access to tags.
-     */
-    match /tags/{tagId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
-    }
-
-    /**
-     * @description Controls access to special day documents within a family.
-     * @path /families/{familyId}/specialDays/{specialDayId}
-     * @allow (read, write) Any authenticated user can read or write special days for the prototype.
-     * @principle Open access for authenticated users for prototyping.
-     */
-    match /families/{familyId}/specialDays/{specialDayId} {
+    match /{document=**} {
       allow read, write: if request.auth != null;
     }
   }

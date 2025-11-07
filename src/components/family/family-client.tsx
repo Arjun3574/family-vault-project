@@ -9,10 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Copy, Loader2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, writeBatch, getDoc, arrayUnion } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-
+import { doc, collection, query, where, writeBatch, getDoc, arrayUnion, setDoc } from 'firebase/firestore';
 
 type Member = {
     id: string;
@@ -42,7 +39,8 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
 
   const membersQuery = useMemoFirebase(() => {
     if (!firestore || !familyData?.memberIds || familyData.memberIds.length === 0) return null;
-    return query(collection(firestore, 'userProfiles'), where('id', 'in', familyData.memberIds));
+    // Firestore 'in' queries are limited to 30 items. For a larger family, you might need a different approach.
+    return query(collection(firestore, 'userProfiles'), where('id', 'in', familyData.memberIds.slice(0, 30)));
   }, [firestore, familyData]);
 
   const { data: members, isLoading: membersLoading } = useCollection<Member>(membersQuery);
@@ -69,13 +67,8 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         const batch = writeBatch(firestore);
         
         batch.set(familyDocRef, newFamilyData);
-        
-        batch.set(userProfileRef, { 
-            familyId: familyId,
-            id: user.uid,
-            email: user.email,
-            displayName: user.displayName || 'New User'
-         }, { merge: true });
+        // Use update to add the familyId to the existing user profile.
+        batch.update(userProfileRef, { familyId: familyId });
 
         await batch.commit();
         
@@ -84,14 +77,6 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         toast({ title: 'Family Created!', description: `Welcome to ${familyName}!` });
     } catch(e: any) {
         console.error("Error creating family: ", e);
-        errorEmitter.emit(
-          'permission-error',
-          new FirestorePermissionError({
-            path: `families and userProfiles/${user.uid}`,
-            operation: 'write',
-            requestResourceData: { familyName },
-          })
-        );
         toast({ title: 'Error', description: e.message || 'Could not create family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
@@ -119,12 +104,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
 
         batch.update(familyDocRef, { memberIds: arrayUnion(user.uid) });
 
-        batch.set(userProfileRef, { 
-            familyId: familyId,
-            id: user.uid,
-            email: user.email,
-            displayName: user.displayName || 'New User'
-         }, { merge: true });
+        batch.update(userProfileRef, { familyId: familyId });
         
         await batch.commit();
         
@@ -133,13 +113,6 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         toast({ title: 'Welcome to the Family!'});
     } catch (e: any) {
         console.error("Error joining family: ", e);
-        errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-              path: `families/${familyId} and userProfiles/${user.uid}`,
-              operation: 'write',
-            })
-          );
         toast({ title: 'Error', description: e.message || 'Could not join family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
