@@ -66,23 +66,26 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
 
     const batch = writeBatch(firestore);
 
-    batch.update(familyRef, {
-        memberIds: arrayUnion(uid)
-    });
-    batch.update(userRef, { familyId });
+    const familyUpdate = { memberIds: arrayUnion(uid) };
+    batch.update(familyRef, familyUpdate);
+
+    const userProfileUpdate = { familyId };
+    batch.update(userRef, userProfileUpdate);
 
     try {
         await batch.commit();
         return familyId;
     } catch (error) {
+        // Create the contextual error object on failure.
         const permissionError = new FirestorePermissionError({
             path: `families/${familyId} and userProfiles/${uid}`,
             operation: 'update',
             requestResourceData: { 
-                familyUpdate: { memberIds: arrayUnion(uid) },
-                userProfileUpdate: { familyId }
+                familyUpdate,
+                userProfileUpdate
              },
         });
+        // Throw the error so the Next.js dev overlay can display it.
         throw permissionError;
     }
 }
