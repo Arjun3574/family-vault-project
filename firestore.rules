@@ -1,33 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // User profiles can be created by any authenticated user,
-    // but can only be read or updated by the user themselves.
     match /userProfiles/{userId} {
-      allow create: if request.auth != null;
-      allow read, update: if request.auth != null && request.auth.uid == userId;
+      // A user can create their own profile upon signup.
+      allow create: if request.auth.uid == userId;
+      // A user can only read or update their own profile.
+      allow read, update: if request.auth.uid == userId;
     }
-
-    // Families can be created by any authenticated user.
-    // They can only be read by a member of that family.
-    // They can only be updated by a member of that family.
     match /families/{familyId} {
+      // Any authenticated user can create a family.
       allow create: if request.auth != null;
+      // To read or update a family doc, you must be a member.
+      // We check the user's own profile document to confirm their familyId.
       allow read, update: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
     }
-    
-    // Photos can be created, read, or updated by a member of the family.
     match /families/{familyId}/photos/{photoId} {
-        allow read, write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
+      // You can read/write photos in a family if you are a member of that family.
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
     }
-
-    // Special Days can be managed by family members.
     match /families/{familyId}/specialDays/{specialDayId} {
+        // You can manage special days if you are a member of that family.
         allow read, write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
     }
-    
-    // Tags are public to all authenticated users for simplicity in this prototype.
     match /tags/{tagId} {
         allow read, write: if request.auth != null;
     }

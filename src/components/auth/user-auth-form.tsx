@@ -6,7 +6,6 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  User,
   updateProfile,
 } from 'firebase/auth';
 import { cn } from '@/lib/utils';
@@ -14,15 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
+import { useAuth as useFirebaseAuth } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const auth = useFirebaseAuth();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState<boolean>(false);
@@ -34,39 +31,13 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [signUpPassword, setSignUpPassword] = React.useState('');
   const [signUpName, setSignUpName] = React.useState('');
 
-  const createUserProfile = async (user: User, displayName?: string) => {
-    if (!firestore) return;
-    const userProfileRef = doc(firestore, 'userProfiles', user.uid);
-    const userProfileSnap = await getDoc(userProfileRef);
-
-    if (!userProfileSnap.exists()) {
-      try {
-        await setDoc(userProfileRef, {
-          id: user.uid,
-          email: user.email,
-          displayName: user.displayName || displayName || 'New User',
-          familyId: null, // Explicitly set familyId to null on creation
-        });
-      } catch (error: any) {
-        console.error("Error creating user profile:", error);
-        toast({
-            title: 'Profile Creation Failed',
-            description: 'Could not create your user profile. Please try again.',
-            variant: 'destructive',
-        });
-        // Re-throw the error if you want to handle it further up the call stack
-        throw error;
-      }
-    }
-  };
 
   async function onLogin(event: React.SyntheticEvent) {
     event.preventDefault();
     setIsLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-      // Ensure profile exists on login as well, in case it was missed during signup
-      await createUserProfile(userCredential.user);
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      // AuthProvider will handle profile creation check
     } catch (error: any) {
       toast({
         title: 'Authentication Failed',
@@ -84,8 +55,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword);
       await updateProfile(userCredential.user, { displayName: signUpName });
-      // This now includes the familyId: null
-      await createUserProfile(userCredential.user, signUpName);
+      // AuthProvider will handle profile creation
     } catch (error: any) {
       toast({
         title: 'Sign-up Failed',
@@ -101,8 +71,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      const userCredential = await signInWithPopup(auth, provider);
-      await createUserProfile(userCredential.user);
+      await signInWithPopup(auth, provider);
+      // AuthProvider will handle profile creation
     } catch (error: any) {
       toast({
         title: 'Google Sign-In Failed',

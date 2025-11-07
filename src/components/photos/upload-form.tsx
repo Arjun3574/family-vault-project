@@ -19,15 +19,14 @@ import { useToast } from "@/hooks/use-toast"
 import { Mic, FileAudio, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react"
 import { useState, useMemo } from "react";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { collection, serverTimestamp, addDoc, doc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
+import { uploadFamilyPhoto } from "@/app/actions";
+import { useRouter } from "next/navigation";
 
 
 const formSchema = z.object({
@@ -42,12 +41,12 @@ type UserProfile = {
 
 export function UploadForm() {
   const { toast } = useToast();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { user } = useAuthContext();
   const firestore = useFirestore();
-  const storage = getStorage();
   
   const userProfileRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -66,16 +65,11 @@ export function UploadForm() {
   
   const photoRef = form.register("photo");
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     const familyId = userProfile?.familyId;
 
-    if (!user || !firestore) {
-        toast({ title: "Authentication Error", description: "You must be logged in to upload photos.", variant: "destructive" });
-        return;
-    }
-    
-    if (!familyId) {
-        toast({ title: "No Family Found", description: "You must create or join a family before you can upload photos.", variant: "destructive" });
+    if (!user || !familyId) {
+        toast({ title: "Verification Error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
         return;
     }
 
@@ -84,83 +78,45 @@ export function UploadForm() {
         toast({ title: "No photo selected", description: "Please select a photo to upload.", variant: "destructive" });
         return;
     }
-
+    
     setIsSubmitting(true);
-    setUploadProgress(0);
+    
+    const formData = new FormData();
+    formData.append('photo', photoFile);
+    formData.append('note', values.note || '');
+    formData.append('tags', values.tags);
+    
+    try {
+        toast({
+          title: "Uploading Memory...",
+          description: "Your photo is being added to the vault.",
+        });
+        
+        // Mock progress for user feedback
+        setUploadProgress(25);
+        
+        await uploadFamilyPhoto(user.uid, familyId, formData);
+        
+        setUploadProgress(100);
 
-    const storageRef = ref(storage, `photos/${familyId}/${Date.now()}_${photoFile.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, photoFile);
-    
-    toast({
-      title: "Uploading Memory...",
-      description: "Your photo is being added to the vault.",
-    });
-    
-    
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
-      }, 
-      (error) => {
+        toast({
+            title: "Memory Uploaded! 🎉",
+            description: "Your photo has been successfully added to the vault.",
+        });
+        form.reset();
+        setFileName("");
+        router.push('/dashboard');
+    } catch(error: any) {
         console.error("Upload failed", error);
         toast({
             title: "Upload Failed",
             description: error.message || "An unexpected error occurred.",
             variant: "destructive",
         });
+    } finally {
         setIsSubmitting(false);
-        setUploadProgress(null);
-      }, 
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          const photoData = {
-              userId: user.uid,
-              familyId: familyId,
-              storageUrl: downloadURL,
-              textNote: values.note,
-              tagIds: values.tags.split(',').map(tag => tag.trim().toLowerCase()),
-              uploadDate: serverTimestamp(),
-          };
-
-          const photosCollection = collection(firestore, `families/${familyId}/photos`);
-          addDoc(photosCollection, photoData)
-            .then(() => {
-                toast({
-                    title: "Memory Uploaded! 🎉",
-                    description: "Your photo has been successfully added to the vault.",
-                });
-                form.reset();
-                setFileName("");
-            })
-            .catch(error => {
-                console.error("Failed to save photo metadata", error);
-                 errorEmitter.emit(
-                    'permission-error',
-                    new FirestorePermissionError({
-                      path: photosCollection.path,
-                      operation: 'create',
-                      requestResourceData: photoData,
-                    })
-                  )
-            })
-            .finally(() => {
-                setIsSubmitting(false);
-                setUploadProgress(null);
-            });
-      
-        }).catch((error) => {
-           console.error("Could not get download URL", error);
-           toast({
-                title: "Upload Failed",
-                description: "Could not finalize photo upload.",
-                variant: "destructive",
-            });
-            setIsSubmitting(false);
-            setUploadProgress(null);
-        });
-      }
-    );
+        setUploadProgress(0);
+    }
   }
 
   if (isUserLoading) {
@@ -232,7 +188,7 @@ export function UploadForm() {
             )}
             />
             
-            {uploadProgress !== null && (
+            {isSubmitting && (
                 <div className="space-y-2">
                     <Label>Upload Progress</Label>
                     <Progress value={uploadProgress} />

@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import { AuthProvider } from '@/contexts/auth-provider';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: 'FamilyVault',
