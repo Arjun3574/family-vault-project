@@ -69,8 +69,13 @@ export function UploadForm() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     const familyId = userProfile?.familyId;
 
-    if (!user || !firestore || !familyId) {
-        toast({ title: "Authentication or Family ID error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
+    if (!user || !firestore) {
+        toast({ title: "Authentication Error", description: "You must be logged in to upload photos.", variant: "destructive" });
+        return;
+    }
+    
+    if (!familyId) {
+        toast({ title: "No Family Found", description: "You must create or join a family before you can upload photos.", variant: "destructive" });
         return;
     }
 
@@ -158,8 +163,6 @@ export function UploadForm() {
     );
   }
 
-  const canUpload = !isSubmitting && !!userProfile?.familyId && !isUserLoading;
-
   if (isUserLoading) {
       return (
         <div className="space-y-4">
@@ -188,7 +191,7 @@ export function UploadForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <fieldset disabled={!canUpload}>
+        <fieldset disabled={isSubmitting}>
             <FormField
             control={form.control}
             name="photo"
@@ -289,7 +292,7 @@ export function UploadForm() {
             )}
             />
 
-            <Button type="submit" disabled={!canUpload} className="w-full">
+            <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? (
                 <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
