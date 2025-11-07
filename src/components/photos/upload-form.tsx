@@ -17,16 +17,15 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Mic, FileAudio, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react"
-import { useState, useMemo } from "react";
-import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { useState } from "react";
+import { useFirestore, useDoc, useMemoFirebase, useAuth } from "@/firebase";
 import { doc } from "firebase/firestore";
-import { useAuthContext } from "@/contexts/auth-provider";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
-import { uploadFamilyPhoto } from "@/app/actions";
 import { useRouter } from "next/navigation";
+import { uploadFamilyPhotoClient } from "@/app/client-actions";
 
 
 const formSchema = z.object({
@@ -45,7 +44,7 @@ export function UploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const firestore = useFirestore();
   
   const userProfileRef = useMemoFirebase(() => {
@@ -81,11 +80,6 @@ export function UploadForm() {
     
     setIsSubmitting(true);
     
-    const formData = new FormData();
-    formData.append('photo', photoFile);
-    formData.append('note', values.note || '');
-    formData.append('tags', values.tags);
-    
     try {
         toast({
           title: "Uploading Memory...",
@@ -95,7 +89,7 @@ export function UploadForm() {
         // Mock progress for user feedback
         setUploadProgress(25);
         
-        await uploadFamilyPhoto(user.uid, familyId, formData);
+        await uploadFamilyPhotoClient(photoFile, values.note || '', values.tags, familyId);
         
         setUploadProgress(100);
 

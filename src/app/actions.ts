@@ -1,14 +1,13 @@
 'use server';
 
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { doc, getDoc, updateDoc, arrayUnion, writeBatch, collection, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, writeBatch, collection, serverTimestamp } from "firebase/firestore";
 import { initializeFirebaseServer } from "@/firebase/server-init";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter-server";
 
-const { firestore, storage } = initializeFirebaseServer();
+const { firestore } = initializeFirebaseServer();
 
-export async function createFamilyAtomic(uid: string, familyName: string, userDisplayName: string, userEmail: string) {
+export async function createFamilyAtomic(uid: string, familyName: string) {
   if (!uid || !familyName) {
     throw new Error("User ID and family name are required.");
   }
@@ -32,21 +31,17 @@ export async function createFamilyAtomic(uid: string, familyName: string, userDi
     await batch.commit();
     return familyRef.id;
   } catch (error) {
-    // This is a critical step. If the batch fails due to permissions,
-    // we need to know which part failed and with what data.
-    // We can't know for sure if it was the set or the update, so we report 'write'.
     const permissionError = new FirestorePermissionError({
       path: `families/${familyRef.id} and userProfiles/${uid}`,
-      operation: 'write', // A batch can contain multiple operations
+      operation: 'write',
       requestResourceData: {
         family: familyData,
         userProfileUpdate: userProfileUpdate
       },
     });
-    // This will throw the error to be caught by the client.
-    // In a real app, a server-side emitter might log to a different system.
-    // For this prototype, re-throwing is sufficient to get the error to the dev overlay.
-    throw permissionError;
+    errorEmitter.emit('permission-error', permissionError);
+    // Re-throw the original error if emitter doesn't throw
+    throw error;
   }
 }
 
@@ -76,7 +71,6 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
         await batch.commit();
         return familyId;
     } catch (error) {
-        // Create the contextual error object on failure.
         const permissionError = new FirestorePermissionError({
             path: `families/${familyId} and userProfiles/${uid}`,
             operation: 'update',
@@ -85,59 +79,7 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
                 userProfileUpdate
              },
         });
-        // Throw the error so the Next.js dev overlay can display it.
-        throw permissionError;
+        errorEmitter.emit('permission-error', permissionError);
+        throw error;
     }
-}
-
-
-export async function uploadFamilyPhoto(uid: string, familyId: string, formData: FormData) {
-  const file = formData.get('photo') as File;
-  const textNote = formData.get('note') as string;
-  const tags = formData.get('tags') as string;
-
-  if (!file) throw new Error("No file provided.");
-
-  // Defensive checks remain important
-  const userSnap = await getDoc(doc(firestore, "userProfiles", uid));
-  if (!userSnap.exists()) throw new Error("User profile missing");
-  const user = userSnap.data();
-  if (!user.familyId || user.familyId !== familyId) throw new Error("User not in this family");
-
-  const path = `families/${familyId}/photos/${Date.now()}_${file.name}`;
-  const fileRef = ref(storage, path);
-  
-  // Storage uploads should also be wrapped for permission errors, but that's a separate step.
-  // We focus on the Firestore error reported.
-  await uploadBytes(fileRef, file);
-  const url = await getDownloadURL(fileRef);
-
-  // Save metadata to Firestore subcollection
-  const photoRef = doc(collection(firestore, `families/${familyId}/photos`));
-  const photoData = {
-    storageUrl: url,
-    userId: uid,
-    familyId: familyId,
-    textNote: textNote || "",
-    tagIds: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
-    uploadDate: serverTimestamp(),
-  };
-
-  try {
-    await setDoc(photoRef, photoData);
-  } catch (error) {
-    // This is where the permission error likely occurred.
-    // We create and throw the specialized error.
-    const permissionError = new FirestorePermissionError({
-      path: photoRef.path,
-      operation: 'create',
-      requestResourceData: photoData,
-    });
-    // Re-throw the error so it's caught by Next.js's error boundary
-    // and displayed in the development overlay.
-    throw permissionError;
-  }
-
-
-  return { id: photoRef.id, url };
 }
