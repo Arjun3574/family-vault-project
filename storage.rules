@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // 1. Only authenticated users can read or write to storage.
-// 2. Users can only write to a path that matches their familyId and userId.
+// 2. Users can only write to a path that matches their familyId.
 // 3. The uploaded file must be an image and less than 10MB.
 service firebase.storage {
   match /b/{bucket}/o {

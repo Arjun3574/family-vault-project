@@ -10,6 +10,9 @@ import { Copy, Loader2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, writeBatch, getDoc, arrayUnion } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 type Member = {
     id: string;
@@ -81,6 +84,14 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         toast({ title: 'Family Created!', description: `Welcome to ${familyName}!` });
     } catch(e: any) {
         console.error("Error creating family: ", e);
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: `families and userProfiles/${user.uid}`,
+            operation: 'write',
+            requestResourceData: { familyName },
+          })
+        );
         toast({ title: 'Error', description: e.message || 'Could not create family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
@@ -122,6 +133,13 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         toast({ title: 'Welcome to the Family!'});
     } catch (e: any) {
         console.error("Error joining family: ", e);
+        errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+              path: `families/${familyId} and userProfiles/${user.uid}`,
+              operation: 'write',
+            })
+          );
         toast({ title: 'Error', description: e.message || 'Could not join family.', variant: 'destructive' });
     } finally {
         setIsLoading(false);

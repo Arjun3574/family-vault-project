@@ -67,7 +67,7 @@ service cloud.firestore {
      * @principle Enforces family-based access to photos, combined with individual photo ownership.
      */
     match /families/{familyId}/photos/{photoId} {
-      allow get, list: if request.auth != null;
+      allow get, list: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid && request.resource.data.familyId == familyId;
       allow update: if request.auth != null && resource.data.userId == request.auth.uid;
       allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
