@@ -2,7 +2,7 @@ import { SpecialDaysClient } from "@/components/special-days/special-days-client
 import { CalendarHeart } from "lucide-react";
 
 export default function SpecialDaysPage() {
-    // Mock data for existing special days
+    // Using static mock data to ensure the page loads without Firebase dependencies.
     const specialDays = [
         { id: "1", name: "Dad's Birthday", date: "October 26", eventType: "Birthday", theme: "balloons" },
         { id: "2", name: "Anniversary", date: "June 15", eventType: "Anniversary", theme: "photo album" },
