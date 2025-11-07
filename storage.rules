@@ -1,17 +1,19 @@
 rules_version = '2';
 
-/**
- * @fileoverview Firebase Storage Security Rules for the application.
- *
- * For prototyping purposes, these rules allow any authenticated user to upload
- * any file. This is NOT suitable for a production environment but ensures that
- * the photo upload functionality works without permission errors.
- */
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow read and write access to any path for any authenticated user.
+    
+    // Users can only upload photos to their own family's folder.
+    // The path must match /photos/{familyId}/{fileName}
+    // The user's own profile document in Firestore must contain the matching familyId.
+    match /photos/{familyId}/{fileName} {
+      allow read, write: if request.auth != null 
+          && get(/databases/(default)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
+    }
+    
+    // Allow read for any other path, for things like public assets.
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read: if true;
     }
   }
 }

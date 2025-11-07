@@ -40,13 +40,23 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const userProfileSnap = await getDoc(userProfileRef);
 
     if (!userProfileSnap.exists()) {
-      // familyId is intentionally NOT set here. It's set when a user
-      // creates or joins a family in the FamilyClient component.
-      await setDoc(userProfileRef, {
-        id: user.uid,
-        email: user.email,
-        displayName: user.displayName || displayName || 'New User',
-      });
+      try {
+        await setDoc(userProfileRef, {
+          id: user.uid,
+          email: user.email,
+          displayName: user.displayName || displayName || 'New User',
+          familyId: null, // Explicitly set familyId to null on creation
+        });
+      } catch (error: any) {
+        console.error("Error creating user profile:", error);
+        toast({
+            title: 'Profile Creation Failed',
+            description: 'Could not create your user profile. Please try again.',
+            variant: 'destructive',
+        });
+        // Re-throw the error if you want to handle it further up the call stack
+        throw error;
+      }
     }
   };
 
@@ -74,6 +84,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword);
       await updateProfile(userCredential.user, { displayName: signUpName });
+      // This now includes the familyId: null
       await createUserProfile(userCredential.user, signUpName);
     } catch (error: any) {
       toast({
