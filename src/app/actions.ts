@@ -2,9 +2,9 @@
 
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, getDoc, updateDoc, arrayUnion, writeBatch, collection, serverTimestamp, setDoc } from "firebase/firestore";
-import { initializeFirebase } from "@/firebase";
+import { initializeFirebaseServer } from "@/firebase/server-init";
 
-const { firestore, storage } = initializeFirebase();
+const { firestore, storage } = initializeFirebaseServer();
 
 export async function createFamilyAtomic(uid: string, familyName: string) {
   if (!uid || !familyName) {
