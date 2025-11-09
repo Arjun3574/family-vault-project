@@ -1,12 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+  
     match /userProfiles/{userId} {
       // A user can create their own profile upon signup.
       allow create: if request.auth.uid == userId;
       // A user can only read or update their own profile.
       allow read, update: if request.auth.uid == userId;
     }
+    
     match /families/{familyId} {
       // Any authenticated user can create a family.
       allow create: if request.auth != null;
@@ -14,20 +16,28 @@ service cloud.firestore {
       // To read a family doc, you must be a member.
       allow read: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
       
-      // To update a family doc (e.g. join), you must not already be in a family.
-      // To delete it, you must be the owner.
-      allow update: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == null;
+      // Only the 'owner' of the family can update its details.
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid;
+      
+      // Only the owner can delete the family.
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
+
+    // Rules for photos now use custom claims for performance and cost savings.
+    // This requires a Cloud Function to set the 'familyId' on the user's auth token.
     match /families/{familyId}/photos/{photoId} {
-      // You can read/write photos in a family if you are a member of that family.
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
+      // You can read/write photos if your token says you are in this family.
+      allow read, write: if request.auth.token.familyId == familyId;
     }
+    
+    // Rules for special days also use custom claims.
     match /families/{familyId}/specialDays/{specialDayId} {
-        // You can manage special days if you are a member of that family.
-        allow read, write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
+       // You can manage special days if your token says you are in this family.
+       allow read, write: if request.auth.token.familyId == familyId;
     }
+    
     match /tags/{tagId} {
+        // Any authenticated user can manage tags.
         allow read, write: if request.auth != null;
     }
   }
