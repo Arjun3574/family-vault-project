@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     familyId: userProfile?.familyId ?? null,
     accessToken,
     setAccessToken,
-    loading: isAuthLoading || (user && isProfileLoading), // Loading if auth is loading OR if user exists but profile is still loading
+    loading: isAuthLoading || (user && isProfileLoading),
     logout: handleLogout,
   }), [user, userProfile, isAuthLoading, isProfileLoading, handleLogout, accessToken]);
 
