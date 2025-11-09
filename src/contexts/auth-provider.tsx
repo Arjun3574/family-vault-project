@@ -58,9 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user && firestore) {
       ensureUserProfile(firestore, user);
     }
-    if (!user) {
-        setAccessToken(null);
-    }
   }, [user, firestore]);
   
   const handleLogout = () => {
