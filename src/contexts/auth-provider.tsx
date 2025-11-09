@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { User, GoogleAuthProvider, getAdditionalUserInfo, UserCredential } from 'firebase/auth';
+import { User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, Firestore } from 'firebase/firestore';
 
 export interface UserProfile {
@@ -55,28 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (user && firestore && auth.currentUser) {
+    if (user && firestore) {
       ensureUserProfile(firestore, user);
-      
-      // The user object from onAuthStateChanged doesn't have the full UserCredential.
-      // We must get it from the currentUser after the state has settled.
-      // The `auth.currentUser` might still be null briefly after `user` is set.
-      try {
-        const info = getAdditionalUserInfo({ ...auth.currentUser } as UserCredential);
-        if (info && info.providerId === GoogleAuthProvider.PROVIDER_ID) {
-            const cred = GoogleAuthProvider.credentialFromResult({user});
-            // This is a bit of a hack, ideal would be to get it on signin flow
-            // but that's in another component.
-        }
-      } catch(e) {
-          // This can fail if getAdditionalUserInfo is called at the wrong time.
-          // We can safely ignore it as the token is primarily handled in the sign-in form.
-      }
     }
     if (!user) {
         setAccessToken(null);
     }
-  }, [user, firestore, auth]);
+  }, [user, firestore]);
   
   const handleLogout = () => {
     if (!auth) return;
