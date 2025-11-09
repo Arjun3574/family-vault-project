@@ -23,17 +23,14 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
 
-    // Rules for photos now use custom claims for performance and cost savings.
-    // This requires a Cloud Function to set the 'familyId' on the user's auth token.
+    // Rules for photos reverted to use get() for compatibility without Cloud Functions.
     match /families/{familyId}/photos/{photoId} {
-      // You can read/write photos if your token says you are in this family.
-      allow read, write: if request.auth.token.familyId == familyId;
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
     }
     
-    // Rules for special days also use custom claims.
+    // Rules for special days reverted to use get() for compatibility without Cloud Functions.
     match /families/{familyId}/specialDays/{specialDayId} {
-       // You can manage special days if your token says you are in this family.
-       allow read, write: if request.auth.token.familyId == familyId;
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
     }
     
     match /tags/{tagId} {
