@@ -29,7 +29,6 @@ export async function uploadFamilyPhotoClient(
   if (!auth.currentUser) throw new Error('Not authenticated');
   const uid = auth.currentUser.uid;
 
-  // Defensive checks
   const userSnap = await getDoc(doc(firestore, 'userProfiles', uid));
   if (!userSnap.exists()) throw new Error('User profile missing');
   const user = userSnap.data();
