@@ -33,7 +33,7 @@ export default function FamilyPage() {
 
   const { data: familyData, isLoading: isFamilyLoading } = useDoc(familyRef);
   
-  const isLoading = isUserLoading || (userProfile && !familyId) || (familyId && isFamilyLoading);
+  const isLoading = isUserLoading || (userProfile && !familyId && !isFamilyLoading) || (familyId && isFamilyLoading);
   
   return (
     <div className="container mx-auto max-w-4xl">
@@ -46,7 +46,7 @@ export default function FamilyPage() {
           <p className="text-lg text-muted-foreground">Manage your family group and invite members.</p>
         </div>
       </div>
-       {isLoading ? (
+       {isLoading || !userProfile ? (
         <Card>
           <CardHeader>
             <Skeleton className="h-8 w-48" />

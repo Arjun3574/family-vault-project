@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Copy, Loader2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 import { createFamilyAtomic, joinFamilyAtomic } from '@/app/actions';
 
 type Member = {
@@ -41,7 +41,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
   const membersQuery = useMemoFirebase(() => {
     if (!firestore || !familyData?.memberIds || familyData.memberIds.length === 0) return null;
     // Firestore 'in' queries are limited to 30 elements in the array.
-    return query(collection(firestore, 'userProfiles'), where('id', 'in', familyData.memberIds.slice(0, 30)));
+    return query(collection(firestore, 'userProfiles'), where(documentId(), 'in', familyData.memberIds.slice(0, 30)));
   }, [firestore, familyData]);
 
   const { data: members, isLoading: membersLoading } = useCollection<Member>(membersQuery);
@@ -54,7 +54,7 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
     const familyName = (event.currentTarget.elements.namedItem('familyName') as HTMLInputElement).value;
     
     try {
-        const familyId = await createFamilyAtomic(user.uid, familyName, user.displayName || '', user.email || '');
+        const familyId = await createFamilyAtomic(user.uid, familyName);
         
         setFamilyData({
             id: familyId,
