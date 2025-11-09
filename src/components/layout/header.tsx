@@ -1,6 +1,6 @@
 'use client';
 
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Menu, LayoutGrid, Upload, CalendarHeart, Users, LogOut } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
@@ -30,6 +30,9 @@ export function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Navigation Menu</SheetTitle>
+          </SheetHeader>
           <nav className="grid gap-2 text-lg font-medium">
             <Link href="/dashboard" className="mb-4 flex items-center gap-2 text-lg font-semibold">
               <Logo className="h-8 w-8" />
