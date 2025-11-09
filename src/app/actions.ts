@@ -1,6 +1,6 @@
 'use server';
 
-import { doc, getDoc, updateDoc, arrayUnion, writeBatch, collection, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, writeBatch, collection, serverTimestamp, getDocs, query, where } from "firebase/firestore";
 import { initializeFirebaseServer } from "@/firebase/server-init";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter-server";
@@ -82,4 +82,49 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
         errorEmitter.emit('permission-error', permissionError);
         throw error;
     }
+}
+
+export async function deleteFamilyAtomic(uid: string, familyId: string) {
+  if (!uid || !familyId) {
+    throw new Error("User ID and Family ID are required.");
+  }
+
+  const familyRef = doc(firestore, "families", familyId);
+  const familySnap = await getDoc(familyRef);
+
+  if (!familySnap.exists()) {
+    throw new Error("Family not found.");
+  }
+
+  const familyData = familySnap.data();
+  if (familyData.owner !== uid) {
+    throw new Error("Only the family owner can delete the family.");
+  }
+
+  const batch = writeBatch(firestore);
+
+  // Reset familyId for all members
+  if (familyData.memberIds && familyData.memberIds.length > 0) {
+    const membersQuery = query(collection(firestore, 'userProfiles'), where('familyId', '==', familyId));
+    const membersSnap = await getDocs(membersQuery);
+    membersSnap.forEach(memberDoc => {
+      batch.update(memberDoc.ref, { familyId: null });
+    });
+  }
+
+  // Delete the family document
+  batch.delete(familyRef);
+
+  try {
+    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    const permissionError = new FirestorePermissionError({
+      path: `families/${familyId}`,
+      operation: 'delete',
+      requestResourceData: { familyId },
+    });
+    errorEmitter.emit('permission-error', permissionError);
+    throw error;
+  }
 }

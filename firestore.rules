@@ -11,10 +11,13 @@ service cloud.firestore {
       // Any authenticated user can create a family.
       allow create: if request.auth != null;
       
-      // To read or update a family doc, you must be a member.
-      // We check the user's own profile document to confirm their familyId.
+      // To read a family doc, you must be a member.
       allow read: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
-      allow update: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
+      
+      // To update a family doc (e.g. join), you must not already be in a family.
+      // To delete it, you must be the owner.
+      allow update: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == null;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
     match /families/{familyId}/photos/{photoId} {
       // You can read/write photos in a family if you are a member of that family.

@@ -6,11 +6,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Copy, Loader2 } from 'lucide-react';
+import { Copy, Loader2, Trash2 } from 'lucide-react';
 import { useAuthContext } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, documentId } from 'firebase/firestore';
-import { createFamilyAtomic, joinFamilyAtomic } from '@/app/actions';
+import { createFamilyAtomic, joinFamilyAtomic, deleteFamilyAtomic } from '@/app/actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type Member = {
     id: string;
@@ -22,6 +33,7 @@ type FamilyData = {
     id: string;
     familyName: string;
     memberIds: string[];
+    owner: string;
 } | null;
 
 interface FamilyClientProps {
@@ -40,7 +52,6 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
 
   const membersQuery = useMemoFirebase(() => {
     if (!firestore || !familyData?.memberIds || familyData.memberIds.length === 0) return null;
-    // Firestore 'in' queries are limited to 30 elements in the array.
     return query(collection(firestore, 'userProfiles'), where(documentId(), 'in', familyData.memberIds.slice(0, 30)));
   }, [firestore, familyData]);
 
@@ -59,7 +70,8 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
         setFamilyData({
             id: familyId,
             familyName: familyName,
-            memberIds: [user.uid]
+            memberIds: [user.uid],
+            owner: user.uid
         });
         setHasFamily(true);
         toast({ title: 'Family Created!', description: `Welcome to ${familyName}!` });
@@ -81,8 +93,6 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
     try {
         await joinFamilyAtomic(user.uid, familyId);
         setHasFamily(true);
-        // We don't have the full family data here, but the page will re-render with the new userProfile data
-        // which will trigger the family data to be fetched.
         toast({ title: 'Welcome to the Family!'});
     } catch (e: any) {
         console.error("Error joining family: ", e);
@@ -92,12 +102,31 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
     }
   };
 
+  const handleDeleteFamily = async () => {
+    if (!user || !familyData) return;
+    
+    setIsLoading(true);
+    try {
+      await deleteFamilyAtomic(user.uid, familyData.id);
+      setFamilyData(null);
+      setHasFamily(false);
+      toast({ title: 'Family Deleted', description: 'The family has been successfully deleted.' });
+    } catch (e: any) {
+      console.error("Error deleting family: ", e);
+      toast({ title: 'Error Deleting Family', description: e.message || 'Could not delete family.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const copyToClipboard = () => {
     if (familyData?.id) {
         navigator.clipboard.writeText(familyData.id);
         toast({ title: 'Copied!', description: 'Family ID copied to clipboard.' });
     }
   }
+
+  const isOwner = user && familyData?.owner === user.uid;
 
   if (hasFamily && familyData) {
     return (
@@ -138,6 +167,38 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
                     </div>
                 </div>
             </CardContent>
+            {isOwner && (
+            <CardFooter className="border-t border-destructive/20 bg-destructive/5 p-4">
+                <div className="flex w-full flex-col items-start gap-2">
+                    <h3 className="font-semibold text-destructive">Danger Zone</h3>
+                    <p className="text-sm text-destructive/80">
+                        Deleting the family is permanent and cannot be undone. This will remove all members and delete all associated data.
+                    </p>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={isLoading}>
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                Delete Family
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action is permanent and cannot be undone. This will permanently delete the <strong>{familyData.familyName}</strong> family and remove all members.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteFamily}>
+                                Yes, delete family
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+          </CardFooter>
+        )}
         </Card>
     )
   }

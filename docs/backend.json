@@ -14,6 +14,10 @@
           "type": "string",
           "description": "Name of the family."
         },
+        "owner": {
+          "type": "string",
+          "description": "The UID of the user who owns/created the family."
+        },
         "memberIds": {
           "type": "array",
           "description": "References to UserProfiles who are members of this family. (Relationship: Family 1:N UserProfile)",
@@ -24,7 +28,8 @@
       },
       "required": [
         "id",
-        "familyName"
+        "familyName",
+        "owner"
       ]
     },
     "UserProfile": {
@@ -38,7 +43,10 @@
           "description": "Unique identifier for the user profile."
         },
         "familyId": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Reference to the Family this user belongs to. (Relationship: Family 1:N UserProfile)"
         },
         "email": {
@@ -54,8 +62,7 @@
       "required": [
         "id",
         "email",
-        "displayName",
-        "familyId"
+        "displayName"
       ]
     },
     "Photo": {
