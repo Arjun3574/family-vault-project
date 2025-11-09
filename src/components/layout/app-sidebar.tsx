@@ -6,7 +6,7 @@ import { LayoutGrid, Upload, CalendarHeart, Users, LogOut } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuthContext } from '@/contexts/auth-provider';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
@@ -17,7 +17,7 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout } = useAuthContext();
 
   return (
     <aside className="sticky top-0 hidden h-screen w-64 flex-col border-r bg-card p-4 shadow-inner md:flex">

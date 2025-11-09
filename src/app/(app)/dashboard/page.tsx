@@ -1,7 +1,7 @@
 'use client';
 import { PhotoGrid } from '@/components/photos/photo-grid';
-import { useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, Timestamp, doc } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { Photo } from '@/components/photos/photo-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthContext } from '@/contexts/auth-provider';
@@ -15,22 +15,9 @@ type FirestorePhoto = {
   uploadDate: Timestamp;
 };
 
-type UserProfile = {
-  familyId?: string;
-};
-
 export default function DashboardPage() {
-  const { user } = useAuthContext();
+  const { familyId, loading: isUserLoading } = useAuthContext();
   const firestore = useFirestore();
-
-  const userProfileRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'userProfiles', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile, isLoading: isUserLoading } = useDoc<UserProfile>(userProfileRef);
-
-  const familyId = userProfile?.familyId;
 
   const photosQuery = useMemoFirebase(() => {
     if (!firestore || !familyId) return null;
@@ -53,7 +40,9 @@ export default function DashboardPage() {
     date: p.uploadDate?.toDate().toISOString() || new Date().toISOString(),
   })) : [];
   
-  if (isUserLoading || isPhotosLoading) {
+  const isLoading = isUserLoading || (familyId && isPhotosLoading);
+
+  if (isLoading) {
     return (
         <div className="container mx-auto">
             <div className="mb-8 space-y-2">

@@ -14,12 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuthContext } from '@/contexts/auth-provider';
 import { LogOut, Users } from 'lucide-react';
 import Link from 'next/link';
 
 export function UserNav() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthContext();
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
   }

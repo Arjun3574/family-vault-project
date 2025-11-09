@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Copy, Loader2, Trash2 } from 'lucide-react';
-import { useAuthContext } from '@/contexts/auth-provider';
+import { useAuthContext, UserProfile } from '@/contexts/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, documentId } from 'firebase/firestore';
 import { createFamilyAtomic, joinFamilyAtomic, deleteFamilyAtomic } from '@/app/actions';
@@ -39,7 +39,7 @@ type FamilyData = {
 interface FamilyClientProps {
     initialHasFamily: boolean;
     initialFamilyData: FamilyData;
-    userProfile: any;
+    userProfile: UserProfile;
 }
 
 export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile }: FamilyClientProps) {
@@ -49,6 +49,11 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
   const { toast } = useToast();
   const { user } = useAuthContext();
   const firestore = useFirestore();
+
+  useEffect(() => {
+    setHasFamily(initialHasFamily);
+    setFamilyData(initialFamilyData);
+  }, [initialHasFamily, initialFamilyData]);
 
   const membersQuery = useMemoFirebase(() => {
     if (!firestore || !familyData?.memberIds || familyData.memberIds.length === 0) return null;
@@ -65,16 +70,9 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
     const familyName = (event.currentTarget.elements.namedItem('familyName') as HTMLInputElement).value;
     
     try {
-        const familyId = await createFamilyAtomic(user.uid, familyName);
-        
-        setFamilyData({
-            id: familyId,
-            familyName: familyName,
-            memberIds: [user.uid],
-            owner: user.uid
-        });
-        setHasFamily(true);
+        await createFamilyAtomic(user.uid, familyName);
         toast({ title: 'Family Created!', description: `Welcome to ${familyName}!` });
+        // No local state update, will rely on real-time listener from provider
     } catch(e: any) {
         console.error("Error creating family: ", e);
         toast({ title: 'Error Creating Family', description: e.message || 'Could not create family.', variant: 'destructive' });
@@ -92,8 +90,8 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
     
     try {
         await joinFamilyAtomic(user.uid, familyId);
-        setHasFamily(true);
         toast({ title: 'Welcome to the Family!'});
+        // No local state update, will rely on real-time listener from provider
     } catch (e: any) {
         console.error("Error joining family: ", e);
         toast({ title: 'Error Joining Family', description: e.message || 'Could not join family.', variant: 'destructive' });
@@ -108,9 +106,8 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
     setIsLoading(true);
     try {
       await deleteFamilyAtomic(user.uid, familyData.id);
-      setFamilyData(null);
-      setHasFamily(false);
       toast({ title: 'Family Deleted', description: 'The family has been successfully deleted.' });
+      // No local state update, will rely on real-time listener from provider
     } catch (e: any) {
       console.error("Error deleting family: ", e);
       toast({ title: 'Error Deleting Family', description: e.message || 'Could not delete family.', variant: 'destructive' });

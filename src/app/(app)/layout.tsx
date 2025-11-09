@@ -5,11 +5,11 @@ import { useEffect } from 'react';
 
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Header } from '@/components/layout/header';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuthContext } from '@/contexts/auth-provider';
 import { Logo } from '@/components/icons/logo';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuthContext();
   const router = useRouter();
 
   useEffect(() => {

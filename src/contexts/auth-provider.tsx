@@ -1,19 +1,28 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useFirebase } from '@/firebase';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, Firestore } from 'firebase/firestore';
 
+export interface UserProfile {
+  id: string;
+  email: string | null;
+  displayName: string | null;
+  familyId: string | null;
+  createdAt?: any;
+}
+
 export interface AuthContextType {
   user: User | null;
-  loading: boolean; // This now means "is auth state ready?"
+  userProfile: UserProfile | null;
+  familyId: string | null;
+  loading: boolean; // True if either auth state or profile is loading
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// This function ensures a user profile document exists in Firestore.
 const ensureUserProfile = async (firestore: Firestore, user: User) => {
   const userRef = doc(firestore, "userProfiles", user.uid);
   const snap = await getDoc(userRef);
@@ -28,31 +37,38 @@ const ensureUserProfile = async (firestore: Firestore, user: User) => {
       });
     } catch (error) {
       console.error("Failed to create user profile:", error);
-      // This error should be surfaced to the user in a real app.
     }
   }
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { auth, firestore, user, isUserLoading } = useFirebase();
-  
+  const { auth, firestore, user, isUserLoading: isAuthLoading } = useFirebase();
+
+  const userProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'userProfiles', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
   useEffect(() => {
     if (user && firestore) {
-      // When user object is available, ensure their profile exists in DB.
       ensureUserProfile(firestore, user);
     }
   }, [user, firestore]);
-
+  
   const handleLogout = () => {
     if (!auth) return;
     auth.signOut();
   };
 
-  const value: AuthContextType = {
+  const value = useMemo((): AuthContextType => ({
     user,
-    loading: isUserLoading,
+    userProfile: userProfile ?? null,
+    familyId: userProfile?.familyId ?? null,
+    loading: isAuthLoading || (user && isProfileLoading), // Loading if auth is loading OR if user exists but profile is still loading
     logout: handleLogout,
-  };
+  }), [user, userProfile, isAuthLoading, isProfileLoading, handleLogout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

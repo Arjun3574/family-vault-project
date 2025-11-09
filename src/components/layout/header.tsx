@@ -7,7 +7,7 @@ import { Logo } from '@/components/icons/logo';
 import { UserNav } from './user-nav';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuthContext } from '@/contexts/auth-provider';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
@@ -18,7 +18,7 @@ const navItems = [
 
 export function Header() {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout } = useAuthContext();
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">

@@ -7,24 +7,9 @@ import { doc } from "firebase/firestore";
 import { Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type UserProfile = {
-  familyId?: string;
-  displayName: string;
-  email: string;
-};
-
 export default function FamilyPage() {
-  const { user } = useAuthContext();
+  const { userProfile, familyId, loading: isUserLoading } = useAuthContext();
   const firestore = useFirestore();
-
-  const userProfileRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'userProfiles', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile, isLoading: isUserLoading } = useDoc<UserProfile>(userProfileRef);
-
-  const familyId = userProfile?.familyId;
   
   const familyRef = useMemoFirebase(() => {
     if (!firestore || !familyId) return null;
@@ -33,7 +18,7 @@ export default function FamilyPage() {
 
   const { data: familyData, isLoading: isFamilyLoading } = useDoc(familyRef);
   
-  const isLoading = isUserLoading || (userProfile && !familyId && !isFamilyLoading) || (familyId && isFamilyLoading);
+  const isLoading = isUserLoading || (familyId && isFamilyLoading) || !userProfile;
   
   return (
     <div className="container mx-auto max-w-4xl">
@@ -46,7 +31,7 @@ export default function FamilyPage() {
           <p className="text-lg text-muted-foreground">Manage your family group and invite members.</p>
         </div>
       </div>
-       {isLoading || !userProfile ? (
+       {isLoading ? (
         <Card>
           <CardHeader>
             <Skeleton className="h-8 w-48" />
@@ -72,7 +57,7 @@ export default function FamilyPage() {
         <FamilyClient 
           initialHasFamily={!!familyId} 
           initialFamilyData={familyData} 
-          userProfile={userProfile}
+          userProfile={userProfile!}
         />
       )}
     </div>
