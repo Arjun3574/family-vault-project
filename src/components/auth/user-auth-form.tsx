@@ -15,12 +15,14 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth as useFirebaseAuth } from '@/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuthContext } from '@/contexts/auth-provider';
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const auth = useFirebaseAuth();
   const { toast } = useToast();
+  const { setAccessToken } = useAuthContext();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState<boolean>(false);
   
@@ -70,8 +72,19 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   async function onGoogleSignIn() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
+    // This scope is CRITICAL for Google Drive access
+    provider.addScope('https://www.googleapis.com/auth/drive.appdata');
+
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        // Save the access token to the context
+        setAccessToken(credential.accessToken);
+        toast({ title: 'Signed in with Google!', description: "You can now use Google Drive features."});
+      } else {
+         throw new Error("Could not retrieve Google Drive access token.");
+      }
       // AuthProvider will handle profile creation
     } catch (error: any) {
       toast({

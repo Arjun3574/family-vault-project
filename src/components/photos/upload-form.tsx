@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { uploadFamilyPhotoClient } from "@/app/client-actions";
+import { uploadToGoogleDrive } from "@/app/google-drive-actions";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { Skeleton } from "../ui/skeleton";
 
@@ -41,7 +41,7 @@ export function UploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const { user, familyId, loading } = useAuthContext();
+  const { user, familyId, loading, accessToken } = useAuthContext();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,6 +58,11 @@ export function UploadForm() {
         toast({ title: "Verification Error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
         return;
     }
+    
+    if (!accessToken) {
+        toast({ title: "Authentication Error", description: "Google Drive access token not found. Please sign in with Google.", variant: "destructive" });
+        return;
+    }
 
     const photoFile = values.photo[0];
     if (!photoFile) {
@@ -66,31 +71,39 @@ export function UploadForm() {
     }
     
     setIsSubmitting(true);
+    setUploadProgress(0);
     
     try {
         toast({
-          title: "Uploading Memory...",
-          description: "Your photo is being added to the vault.",
+          title: "Uploading to Google Drive...",
+          description: "Your photo is being added to your private app folder.",
         });
         
-        // Mock progress for user feedback
-        setUploadProgress(25);
+        // This is a fake progress for UI feedback since fetch doesn't support progress events easily
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => Math.min(prev + 10, 90));
+        }, 500);
+
+        const driveFile = await uploadToGoogleDrive(accessToken, photoFile);
         
-        await uploadFamilyPhotoClient(photoFile, values.note || '', values.tags, familyId);
+        // We aren't saving to Firestore anymore in this flow, but if we were, this is where we'd do it.
+        // For now, we'll just log the success.
+        console.log('File uploaded to Google Drive:', driveFile.id);
         
+        clearInterval(progressInterval);
         setUploadProgress(100);
 
         toast({
-            title: "Memory Uploaded! 🎉",
-            description: "Your photo has been successfully added to the vault.",
+            title: "Memory Uploaded to Drive! 🎉",
+            description: "Your photo has been successfully saved.",
         });
         form.reset();
         setFileName("");
-        router.push('/dashboard');
+        router.push('/dashboard'); // Or a new page to view Drive files
     } catch(error: any) {
         console.error("Upload failed", error);
         toast({
-            title: "Upload Failed",
+            title: "Google Drive Upload Failed",
             description: error.message || "An unexpected error occurred.",
             variant: "destructive",
         });
@@ -139,6 +152,7 @@ export function UploadForm() {
                 <FormControl>
                     <div className="relative">
                     <Input 
+                        id="photo-upload-input"
                         type="file" 
                         accept="image/*"
                         className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
