@@ -2,7 +2,8 @@
 
 import { v2 as cloudinary } from 'cloudinary';
 import { initializeFirebaseServer } from '@/firebase/server-init';
-import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+// Use the server-side 'firebase-admin/firestore' package
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -12,8 +13,11 @@ cloudinary.config({
 });
 
 export async function uploadToCloudinary(formData: FormData) {
+  // Initialize on every request to ensure a valid instance.
+  const { firestore } = initializeFirebaseServer();
+  const serverTimestamp = getFirestore.FieldValue.serverTimestamp;
+
   try {
-    const { firestore } = initializeFirebaseServer();
     const file = formData.get('photo') as File;
     const note = formData.get('note') as string;
     const tags = formData.get('tags') as string;
@@ -43,8 +47,8 @@ export async function uploadToCloudinary(formData: FormData) {
 
     const { public_id } = uploadResult;
 
-    // 2. Save metadata to Firestore
-    const photoRef = doc(collection(firestore, `families/${familyId}/photos`));
+    // 2. Save metadata to Firestore using the Admin SDK
+    const photoRef = firestore.collection(`families/${familyId}/photos`).doc();
     const photoData = {
       storageUrl: public_id, // Store the public_id from Cloudinary
       userId: userId,
@@ -54,11 +58,12 @@ export async function uploadToCloudinary(formData: FormData) {
       uploadDate: serverTimestamp(),
     };
 
-    await setDoc(photoRef, photoData);
+    await photoRef.set(photoData);
 
     return { id: photoRef.id, public_id };
   } catch (error: any) {
     console.error('Error uploading to Cloudinary and saving to Firestore:', error);
+    // Return a serializable error object
     return { error: error.message || 'An unknown error occurred during upload.' };
   }
 }

@@ -3,9 +3,11 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { initializeFirebaseServer } from "@/firebase/server-init";
 
-const { firestore } = initializeFirebaseServer();
+// Initialize on every server action call if needed, or rely on cached instance.
+// For serverless environments, initializing per-call is safer.
 
 export async function createFamilyAtomic(uid: string, familyName: string) {
+  const { firestore } = initializeFirebaseServer();
   if (!uid || !familyName) {
     throw new Error("User ID and family name are required.");
   }
@@ -31,6 +33,7 @@ export async function createFamilyAtomic(uid: string, familyName: string) {
 
 
 export async function joinFamilyAtomic(uid: string, familyId: string) {
+    const { firestore } = initializeFirebaseServer();
     if (!uid || !familyId) {
         throw new Error("User ID and Family ID are required.");
     }
@@ -56,6 +59,7 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
 }
 
 export async function deleteFamilyAtomic(uid: string, familyId: string) {
+  const { firestore } = initializeFirebaseServer();
   if (!uid || !familyId) {
     throw new Error("User ID and Family ID are required.");
   }
