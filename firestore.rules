@@ -5,8 +5,14 @@ service cloud.firestore {
     match /userProfiles/{userId} {
       // A user can create their own profile upon signup.
       allow create: if request.auth.uid == userId;
-      // A user can only read or update their own profile.
-      allow read, update: if request.auth.uid == userId;
+      
+      // A user can read their own profile, or the profile of another user in the same family.
+      allow read: if request.auth.uid == userId || 
+                  (get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId != null &&
+                   get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == get(/databases/$(database)/documents/userProfiles/$(userId)).data.familyId);
+
+      // A user can only update their own profile.
+      allow update: if request.auth.uid == userId;
     }
     
     match /families/{familyId} {
