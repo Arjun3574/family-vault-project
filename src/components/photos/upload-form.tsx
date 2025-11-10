@@ -41,7 +41,7 @@ export function UploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const { user, familyId, loading } = useAuthContext();
+  const { user, familyId, accessToken, loading } = useAuthContext();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,6 +56,10 @@ export function UploadForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !familyId) {
         toast({ title: "Verification Error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
+        return;
+    }
+    if (!accessToken) {
+        toast({ title: "Authentication Error", description: "Google Drive access token not found. Please sign in with Google.", variant: "destructive" });
         return;
     }
     
@@ -74,10 +78,10 @@ export function UploadForm() {
     try {
         toast({
           title: "Uploading Photo...",
-          description: "Your memory is being added to the vault.",
+          description: "Your memory is being added to Google Drive.",
         });
 
-        await uploadFamilyPhotoClient(photoFile, values.note || '', values.tags, familyId);
+        await uploadFamilyPhotoClient(accessToken, photoFile, values.note || '', values.tags, familyId);
         
         clearInterval(progressInterval);
         setUploadProgress(100);
@@ -124,6 +128,18 @@ export function UploadForm() {
                 <Link href="/family">
                     <Button variant="link" className="p-0 h-auto ml-1">Go to the Family page</Button>
                 </Link>
+            </AlertDescription>
+        </Alert>
+    )
+  }
+
+  if (!accessToken) {
+    return (
+        <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Google Sign-In Required</AlertTitle>
+            <AlertDescription>
+                To upload photos, you need to be signed in with Google. Please sign out and sign back in using the "Continue with Google" option on the login page.
             </AlertDescription>
         </Alert>
     )
