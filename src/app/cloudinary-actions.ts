@@ -11,10 +11,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const { firestore } = initializeFirebaseServer();
-
 export async function uploadToCloudinary(formData: FormData) {
   try {
+    const { firestore } = initializeFirebaseServer();
     const file = formData.get('photo') as File;
     const note = formData.get('note') as string;
     const tags = formData.get('tags') as string;
