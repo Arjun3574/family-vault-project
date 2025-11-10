@@ -67,7 +67,7 @@ This is the most common point of failure. You must explicitly tell Firebase Stor
     *   Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) on your local machine to get the `gsutil` command.
     *   Open a terminal or command prompt.
     *   Navigate to where you saved `cors.json`.
-    *   Run the command below, replacing `[YOUR_PROJECT_ID]` with your new Firebase Project ID (e.g., `family-vault-app-3d7c5`):
+    *   Run the command below, replacing `[YOUR_PROJECT_ID]` with your new Firebase Project ID (e.g., `studio-7029574972-369af`):
         ```bash
         gsutil cors set cors.json gs://[YOUR_PROJECT_ID].appspot.com
         ```

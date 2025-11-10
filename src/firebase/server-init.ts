@@ -14,16 +14,7 @@ interface FirebaseServerServices {
 
 // This function is for SERVER-SIDE use only.
 export function initializeFirebaseServer(): FirebaseServerServices {
-  if (!getApps().length) {
-    const firebaseApp = initializeApp(firebaseConfig);
-    return {
-      firebaseApp,
-      auth: getAuth(firebaseApp),
-      firestore: getFirestore(firebaseApp),
-      storage: getStorage(firebaseApp),
-    };
-  }
-  const app = getApp();
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   return {
     firebaseApp: app,
     auth: getAuth(app),
