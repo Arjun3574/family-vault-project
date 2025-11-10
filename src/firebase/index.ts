@@ -15,19 +15,12 @@ interface FirebaseServices {
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase(): FirebaseServices {
-  if (!getApps().length) {
-    const firebaseApp = initializeApp(firebaseConfig);
-    return getSdks(firebaseApp);
-  }
-  return getSdks(getApp());
-}
-
-export function getSdks(firebaseApp: FirebaseApp): FirebaseServices {
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
   return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
-    storage: getStorage(firebaseApp),
+    firebaseApp: app,
+    auth: getAuth(app),
+    firestore: getFirestore(app),
+    storage: getStorage(app),
   };
 }
 
