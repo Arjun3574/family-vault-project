@@ -3,7 +3,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { initializeFirebaseServer } from '@/firebase/server-init';
 // Use the server-side 'firebase-admin/firestore' package
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -15,8 +15,6 @@ cloudinary.config({
 export async function uploadToCloudinary(formData: FormData) {
   // Initialize on every request to ensure a valid instance.
   const { firestore } = initializeFirebaseServer();
-  // The serverTimestamp needs to be retrieved from the Firestore service instance, not the static getFirestore function.
-  const serverTimestamp = getFirestore().FieldValue.serverTimestamp();
 
   try {
     const file = formData.get('photo') as File;
@@ -56,7 +54,7 @@ export async function uploadToCloudinary(formData: FormData) {
       familyId: familyId,
       textNote: note || '',
       tagIds: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
-      uploadDate: serverTimestamp,
+      uploadDate: FieldValue.serverTimestamp(),
     };
 
     await photoRef.set(photoData);
