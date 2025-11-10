@@ -67,7 +67,7 @@ This is the most common point of failure. You must explicitly tell Firebase Stor
     *   Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) on your local machine to get the `gsutil` command.
     *   Open a terminal or command prompt.
     *   Navigate to where you saved `cors.json`.
-    *   Run the command below, replacing `[YOUR_PROJECT_ID]` with your new Firebase Project ID:
+    *   Run the command below, replacing `[YOUR_PROJECT_ID]` with your new Firebase Project ID (e.g., `family-vault-app-3d7c5`):
         ```bash
         gsutil cors set cors.json gs://[YOUR_PROJECT_ID].appspot.com
         ```
@@ -83,7 +83,7 @@ The application uses Google APIs for AI features.
 
 ### Step 5: Get Project Configuration and Code
 
-1.  **Update `firebase/config.ts`**: In your new Firebase Project Console, go to **Project Settings** (click the gear icon). Under the "General" tab, find the "Your apps" section. Copy the Firebase SDK configuration object. Paste this object into the `src/firebase/config.ts` file.
+1.  **Update `firebase/config.ts`**: In your new Firebase Project Console, go to **Project Settings** (click the gear icon). Under the "General" tab, find the "Your apps" section. Copy the Firebase SDK configuration object. Paste this object into the `src/firebase/config.ts` file. (This has been done for you).
 2.  **Update `firestore.rules`**: Copy the contents of the `firestore.rules` file from this project into the **Rules** tab of your Firestore Database in the Firebase Console. Click **Publish**.
 3.  **Update `storage.rules`**: Copy the contents of the `storage.rules` file from this project into the **Rules** tab of your Storage in the Firebase Console. Click **Publish**.
 

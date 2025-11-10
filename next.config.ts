@@ -37,6 +37,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  env: {
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: 'dgodngj10',
+  },
 };
 
 export default nextConfig;
