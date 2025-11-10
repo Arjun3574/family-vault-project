@@ -11,6 +11,8 @@ import { initializeFirebase } from '@/firebase';
 const { firestore, storage } = initializeFirebase();
 const auth = initializeFirebase().auth;
 
+// This function is now deprecated in favor of the Cloudinary server action
+// but kept for reference or potential future use.
 export async function uploadFamilyPhotoClient(
   file: File,
   note: string,
@@ -27,9 +29,6 @@ export async function uploadFamilyPhotoClient(
   // 1. Upload to Firebase Storage
   const storageRef = ref(storage, `families/${familyId}/photos/${uid}/${Date.now()}_${file.name}`);
   
-  // Note: For simplicity, we are not using uploadBytesResumable here,
-  // but it would be needed for real progress tracking.
-  // We simulate progress for a better UX.
   onProgress(30);
   await uploadBytes(storageRef, file);
   onProgress(70);

@@ -25,7 +25,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { Skeleton } from "../ui/skeleton";
-import { uploadFamilyPhotoClient } from "@/app/client-actions";
+import { uploadToCloudinary } from "@/app/cloudinary-actions";
 
 
 const formSchema = z.object({
@@ -40,7 +40,6 @@ export function UploadForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
-  const [uploadProgress, setUploadProgress] = useState(0);
   const { user, familyId, loading } = useAuthContext();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -70,14 +69,25 @@ export function UploadForm() {
     try {
         toast({
           title: "Uploading Photo...",
-          description: "Your memory is being saved.",
+          description: "Your memory is being saved to Cloudinary.",
         });
 
-        await uploadFamilyPhotoClient(photoFile, values.note || '', values.tags, familyId, setUploadProgress);
+        const formData = new FormData();
+        formData.append('photo', photoFile);
+        formData.append('note', values.note || '');
+        formData.append('tags', values.tags);
+        formData.append('familyId', familyId);
+        formData.append('userId', user.uid);
+
+        const result = await uploadToCloudinary(formData);
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
         
         toast({
             title: "Memory Uploaded! 🎉",
-            description: "Your photo has been successfully saved.",
+            description: "Your photo has been successfully saved to Cloudinary.",
         });
         form.reset();
         setFileName("");
@@ -88,12 +98,11 @@ export function UploadForm() {
         console.error("Upload failed", error);
         toast({
             title: "Upload Failed",
-            description: error.message || "Could not save photo. Please ensure you have applied the CORS settings.",
+            description: error.message || "Could not save photo. Please try again.",
             variant: "destructive",
         });
     } finally {
         setIsSubmitting(false);
-        setUploadProgress(0);
     }
   }
 
@@ -170,9 +179,9 @@ export function UploadForm() {
             
             {isSubmitting && (
                 <div className="space-y-2">
-                    <Label>Upload Progress</Label>
-                    <Progress value={uploadProgress} />
-                    <p className="text-sm text-muted-foreground">{Math.round(uploadProgress)}% complete</p>
+                    <Label>Upload in progress...</Label>
+                    <Progress value={undefined} />
+                    <p className="text-sm text-muted-foreground">Please wait while your image is uploaded securely.</p>
                 </div>
             )}
 
@@ -232,7 +241,7 @@ export function UploadForm() {
             {isSubmitting ? (
                 <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
+                Uploading to Cloudinary...
                 </>
             ) : (
             "Add to Vault"
