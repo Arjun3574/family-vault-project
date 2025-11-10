@@ -41,7 +41,7 @@ export function UploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const { user, familyId, accessToken, loading } = useAuthContext();
+  const { user, familyId, loading } = useAuthContext();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,10 +58,6 @@ export function UploadForm() {
         toast({ title: "Verification Error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
         return;
     }
-    if (!accessToken) {
-        toast({ title: "Authentication Error", description: "Google Drive access token not found. Please sign in with Google.", variant: "destructive" });
-        return;
-    }
     
     const photoFile = values.photo[0];
     if (!photoFile) {
@@ -70,35 +66,29 @@ export function UploadForm() {
     }
     
     setIsSubmitting(true);
-    // Fake progress for UI feedback
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => Math.min(prev + 10, 90));
-    }, 500);
 
     try {
         toast({
           title: "Uploading Photo...",
-          description: "Your memory is being added to Google Drive.",
+          description: "Your memory is being saved.",
         });
 
-        await uploadFamilyPhotoClient(accessToken, photoFile, values.note || '', values.tags, familyId);
+        await uploadFamilyPhotoClient(photoFile, values.note || '', values.tags, familyId, setUploadProgress);
         
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-
         toast({
             title: "Memory Uploaded! 🎉",
             description: "Your photo has been successfully saved.",
         });
         form.reset();
         setFileName("");
-        router.push('/dashboard');
+        // Give a slight delay before redirecting to allow user to see the success message
+        setTimeout(() => router.push('/dashboard'), 500);
+
     } catch(error: any) {
-        clearInterval(progressInterval);
         console.error("Upload failed", error);
         toast({
             title: "Upload Failed",
-            description: error.message || "An unexpected error occurred.",
+            description: error.message || "Could not save photo. Please ensure you have applied the CORS settings.",
             variant: "destructive",
         });
     } finally {
@@ -128,18 +118,6 @@ export function UploadForm() {
                 <Link href="/family">
                     <Button variant="link" className="p-0 h-auto ml-1">Go to the Family page</Button>
                 </Link>
-            </AlertDescription>
-        </Alert>
-    )
-  }
-
-  if (!accessToken) {
-    return (
-        <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Google Sign-In Required</AlertTitle>
-            <AlertDescription>
-                To upload photos, you need to be signed in with Google. Please sign out and sign back in using the "Continue with Google" option on the login page.
             </AlertDescription>
         </Alert>
     )

@@ -1,74 +1,46 @@
 'use client';
 import {
   doc,
-  getFirestore,
   serverTimestamp,
   setDoc,
   collection,
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { initializeFirebase } from '@/firebase';
 
-const { auth, firestore } = initializeFirebase();
-
-/**
- * Uploads a file to the user's Google Drive AppData folder.
- * @param token The Google Drive API access token.
- * @param fileObject The file to upload.
- * @returns The file metadata from Google Drive, including the file ID.
- */
-async function uploadToGoogleDrive(token: string, fileObject: File) {
-  const metadata = {
-    name: fileObject.name,
-    parents: ['appDataFolder'],
-  };
-
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', fileObject);
-
-  console.log("Uploading to Google Drive...");
-
-  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-    body: form
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error("Google Drive API Error:", errorData);
-    throw new Error(`Google Drive upload failed: ${errorData.error.message}`);
-  }
-
-  const file = await response.json();
-  console.log("File uploaded successfully to Google Drive! File ID:", file.id);
-  return file;
-}
-
+const { firestore, storage } = initializeFirebase();
+const auth = initializeFirebase().auth;
 
 export async function uploadFamilyPhotoClient(
-  accessToken: string,
   file: File,
   note: string,
   tags: string,
-  familyId: string
+  familyId: string,
+  onProgress: (progress: number) => void
 ) {
   if (!auth.currentUser) throw new Error('Not authenticated');
-  if (!accessToken) throw new Error('Google Drive access token not found.');
-  
+
   const uid = auth.currentUser.uid;
+  
+  onProgress(10); // Initial progress
 
-  // 1. Upload to Google Drive
-  const driveFile = await uploadToGoogleDrive(accessToken, file);
+  // 1. Upload to Firebase Storage
+  const storageRef = ref(storage, `families/${familyId}/photos/${uid}/${Date.now()}_${file.name}`);
+  
+  // Note: For simplicity, we are not using uploadBytesResumable here,
+  // but it would be needed for real progress tracking.
+  // We simulate progress for a better UX.
+  onProgress(30);
+  await uploadBytes(storageRef, file);
+  onProgress(70);
 
-  // 2. Save metadata to Firestore, storing the Google Drive fileId
+  const downloadURL = await getDownloadURL(storageRef);
+  onProgress(90);
+
+  // 2. Save metadata to Firestore
   const photoRef = doc(collection(firestore, `families/${familyId}/photos`));
   const photoData = {
-    // Instead of storageUrl, we save the gDriveFileId
-    gDriveFileId: driveFile.id, 
+    storageUrl: downloadURL, 
     userId: uid,
     familyId: familyId,
     textNote: note || '',
@@ -77,7 +49,7 @@ export async function uploadFamilyPhotoClient(
   };
 
   await setDoc(photoRef, photoData);
+  onProgress(100);
 
-  // Return the Google Drive file ID and the new Firestore document ID
-  return { id: photoRef.id, gDriveFileId: driveFile.id };
+  return { id: photoRef.id, url: downloadURL };
 }

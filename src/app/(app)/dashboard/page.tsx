@@ -9,7 +9,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 
 type FirestorePhoto = {
   id: string;
-  gDriveFileId: string; // Changed from storageUrl
+  storageUrl: string;
   textNote: string;
   tagIds: string[];
   uploadDate: Timestamp;
@@ -31,7 +31,7 @@ export default function DashboardPage() {
 
   const photos: Photo[] = photosData ? photosData.map(p => ({
     id: p.id,
-    gDriveFileId: p.gDriveFileId, // Pass the fileId to the photo object
+    src: p.storageUrl,
     alt: p.textNote || 'A family memory',
     description: p.textNote || '',
     tags: p.tagIds || [],

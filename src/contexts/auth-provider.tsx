@@ -17,9 +17,9 @@ export interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   familyId: string | null;
-  accessToken: string | null; // For Google Drive API
+  accessToken: string | null;
   setAccessToken: (token: string | null) => void;
-  loading: boolean; // True if either auth state or profile is loading
+  loading: boolean;
   logout: () => void;
 }
 
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const handleLogout = () => {
     if (!auth) return;
-    setAccessToken(null);
+    setAccessToken(null); // Clear token on logout
     auth.signOut();
   };
 

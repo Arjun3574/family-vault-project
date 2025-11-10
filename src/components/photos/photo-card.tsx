@@ -1,12 +1,12 @@
+import Image from 'next/image';
 import { Card, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { GDriveImage } from './gdrive-image'; // Import the new component
 
 export type Photo = {
   id: string;
-  gDriveFileId: string; // Changed from src
+  src: string;
   alt: string;
   description: string;
   tags: string[];
@@ -26,9 +26,14 @@ export function PhotoCard({ photo, index }: PhotoCardProps) {
   return (
     <div className={cn("break-inside-avoid animate-in fade-in-50 duration-500", rotation)}>
       <Card className="overflow-hidden transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
-        <CardContent className="p-0 aspect-square bg-muted flex items-center justify-center">
-          {/* Use the GDriveImage component to display the photo */}
-          <GDriveImage fileId={photo.gDriveFileId} alt={photo.alt} />
+        <CardContent className="relative p-0 aspect-square bg-muted">
+          <Image 
+            src={photo.src}
+            alt={photo.alt}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          />
         </CardContent>
         <div className="p-4">
            <CardDescription className="mb-2">{photo.description}</CardDescription>
