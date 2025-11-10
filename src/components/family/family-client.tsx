@@ -5,11 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Copy, Loader2, Trash2 } from 'lucide-react';
 import { useAuthContext, UserProfile } from '@/contexts/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, documentId } from 'firebase/firestore';
 import { createFamilyAtomic, joinFamilyAtomic, deleteFamilyAtomic } from '@/app/actions';
 import {
   AlertDialog,
@@ -22,12 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-
-type Member = {
-    id: string;
-    displayName: string;
-    email: string;
-};
+import { FamilyMember } from './family-member';
 
 type FamilyData = {
     id: string;
@@ -48,19 +40,11 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuthContext();
-  const firestore = useFirestore();
 
   useEffect(() => {
     setHasFamily(initialHasFamily);
     setFamilyData(initialFamilyData);
   }, [initialHasFamily, initialFamilyData]);
-
-  const membersQuery = useMemoFirebase(() => {
-    if (!firestore || !familyData?.memberIds || familyData.memberIds.length === 0) return null;
-    return query(collection(firestore, 'userProfiles'), where(documentId(), 'in', familyData.memberIds.slice(0, 30)));
-  }, [firestore, familyData]);
-
-  const { data: members, isLoading: membersLoading } = useCollection<Member>(membersQuery);
 
   const handleCreateFamily = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -146,20 +130,8 @@ export function FamilyClient({ initialHasFamily, initialFamilyData, userProfile 
                 <div>
                     <h3 className="text-lg font-semibold">Members</h3>
                     <div className="mt-2 space-y-4">
-                        {membersLoading && <div>Loading members...</div>}
-                        {members && members.map(member => (
-                            <div key={member.id} className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <Avatar>
-                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${member.email}`} />
-                                        <AvatarFallback>{member.displayName?.charAt(0) || 'U'}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="font-medium">{member.displayName}</p>
-                                        <p className="text-sm text-muted-foreground">{member.email}</p>
-                                    </div>
-                                </div>
-                            </div>
+                        {familyData.memberIds.map(memberId => (
+                            <FamilyMember key={memberId} userId={memberId} />
                         ))}
                     </div>
                 </div>
