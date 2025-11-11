@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast"
 import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User } from "firebase/auth";
 import { savePhotoDetails } from "@/app/actions";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { Skeleton } from "../ui/skeleton";
@@ -33,8 +32,9 @@ const formSchema = z.object({
   tags: z.string().min(1, "Add at least one tag."),
 });
 
+// Hardcode Cloudinary details to remove any environment variable issues.
 const CLOUDINARY_CLOUD_NAME = 'dgodngj10';
-const CLOUDINARY_UPLOAD_PRESET = 'family-vault-unsigned';
+const CLOUDINARY_UPLOAD_PRESET = 'ml_default';
 
 
 export function UploadForm() {
@@ -113,7 +113,7 @@ export function UploadForm() {
     }
   }
   
-    if (loading) {
+  if (loading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-full" />

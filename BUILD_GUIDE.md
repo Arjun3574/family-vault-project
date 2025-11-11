@@ -45,14 +45,13 @@ You need to enable and configure Authentication, Firestore, and Storage.
 The application uses Cloudinary to handle image uploads and transformations.
 
 1.  **Create a Cloudinary Account:** If you don't have one, sign up for a free account at [Cloudinary](https://cloudinary.com/users/register/free).
-2.  **Find Your Cloud Name:** On your Cloudinary Dashboard, find your **Cloud Name**. This has already been added to your `next.config.ts` and `src/components/photos/upload-form.tsx` files.
+2.  **Find Your Cloud Name:** On your Cloudinary Dashboard, find your **Cloud Name**. The application is currently hardcoded to use `dgodngj10`. If your cloud name is different, you will need to update it in `src/components/photos/upload-form.tsx`.
 3.  **Enable Unsigned Uploads:**
     *   Go to **Settings** (click the gear icon in the top right).
     *   Click on the **Upload** tab.
     *   Scroll down to the **Upload presets** section.
-    *   Click **Add upload preset**.
-    *   Change the **Preset name** from the random default to `family-vault-unsigned`.
-    *   Set the **Signing Mode** to **Unsigned**.
+    *   Find the preset named **`ml_default`**. Click **Edit** next to it.
+    *   Change the **Signing Mode** from `Signed` to **`Unsigned`**.
     *   Click **Save** at the top of the page.
 
 ### Step 4: Configure Storage CORS Settings (CRITICAL)
