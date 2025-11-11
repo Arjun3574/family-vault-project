@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
     allowedDevOrigins: [
       'https://6000-firebase-studio-1761983285994.cluster-73qgvk7hjjadkrjeyexca5ivva.dev',
     ],
+    // This can help with WebSocket connection issues in some environments.
+    serverComponentsExternalPackages: ['@firebase/app-check-interop-types'],
+    devToolsWebsocketPath: '/_next/webpack-hmr',
   },
   typescript: {
     ignoreBuildErrors: true,
