@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -21,6 +20,7 @@ import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "firebase/auth";
+import { savePhotoDetails } from "@/app/actions";
 
 const formSchema = z.object({
   photo: z.any().refine(file => file?.length == 1, "Photo is required."),
@@ -57,31 +57,37 @@ export function UploadForm({ user, familyId }: UploadFormProps) {
     }
     
     setIsSubmitting(true);
+    toast({ title: "Uploading Photo...", description: "Your memory is being saved." });
 
     try {
-        toast({
-          title: "Uploading Photo...",
-          description: "Your memory is being saved.",
-        });
+        // Step 1: Upload directly to Cloudinary
+        const cloudinaryFormData = new FormData();
+        cloudinaryFormData.append('file', photoFile);
+        cloudinaryFormData.append('upload_preset', 'family-vault-unsigned');
+        cloudinaryFormData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!);
 
-        const formData = new FormData();
-        formData.append('photo', photoFile);
-        formData.append('note', values.note || '');
-        formData.append('tags', values.tags);
-        formData.append('userId', user.uid);
-        formData.append('familyId', familyId);
-        
-        const response = await fetch('/upload', {
+        const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
+    
+        const cloudinaryResponse = await fetch(cloudinaryUrl, {
             method: 'POST',
-            body: formData,
+            body: cloudinaryFormData,
         });
 
-        const result = await response.json();
-        
-        if (!response.ok || result.error) {
-            throw new Error(result.error || "An unexpected response was received from the server.");
+        const uploadResult = await cloudinaryResponse.json();
+
+        if (!cloudinaryResponse.ok || uploadResult.error) {
+            throw new Error(uploadResult.error?.message || 'Cloudinary upload failed.');
         }
-        
+
+        // Step 2: Save metadata to our database via a Server Action
+        await savePhotoDetails({
+            familyId: familyId,
+            userId: user.uid,
+            note: values.note || '',
+            tags: values.tags,
+            storageId: uploadResult.public_id // Pass the public_id from Cloudinary
+        });
+
         toast({
             title: "Memory Uploaded! 🎉",
             description: "Your photo has been successfully saved.",
@@ -122,8 +128,8 @@ export function UploadForm({ user, familyId }: UploadFormProps) {
                         className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
                         {...photoRef}
                         onChange={(e) => {
-                        field.onChange(e.target.files);
-                        setFileName(e.target.files?.[0]?.name ?? "");
+                          field.onChange(e.target.files);
+                          setFileName(e.target.files?.[0]?.name ?? "");
                         }}
                         disabled={isSubmitting}
                     />

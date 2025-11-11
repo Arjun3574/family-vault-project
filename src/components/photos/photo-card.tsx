@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { AdvancedImage } from '@cloudinary/react';
 import { Cloudinary } from '@cloudinary/url-gen';
-import { auto } from '@cloudinary/url-gen/actions/resize';
+import { fill } from '@cloudinary/url-gen/actions/resize';
 import { autoGravity } from '@cloudinary/url-gen/qualifiers/gravity';
 
 export type Photo = {
@@ -38,7 +38,7 @@ export function PhotoCard({ photo, index }: PhotoCardProps) {
     .image(photo.src)
     .format('auto')
     .quality('auto')
-    .resize(auto().gravity(autoGravity()).width(500).height(500));
+    .resize(fill().width(500).height(500).gravity(autoGravity()));
 
   return (
     <div className={cn("break-inside-avoid animate-in fade-in-50 duration-500", rotation)}>

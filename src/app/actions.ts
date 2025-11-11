@@ -90,3 +90,32 @@ export async function deleteFamilyAtomic(uid: string, familyId: string) {
   await batch.commit();
   return { success: true };
 }
+
+export async function savePhotoDetails(data: {
+  familyId: string;
+  userId: string;
+  note: string;
+  tags: string;
+  storageId: string;
+}) {
+  const { firestore } = initializeFirebaseServer();
+  const { familyId, userId, note, tags, storageId } = data;
+
+  if (!familyId || !userId || !storageId) {
+    throw new Error("Missing required photo details.");
+  }
+
+  const photoData = {
+    storageUrl: storageId,
+    userId: userId,
+    familyId: familyId,
+    textNote: note || '',
+    tagIds: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
+    uploadDate: FieldValue.serverTimestamp(),
+  };
+
+  const photoRef = firestore.collection(`families/${familyId}/photos`).doc();
+  await photoRef.set(photoData);
+
+  return { success: true, id: photoRef.id };
+}
