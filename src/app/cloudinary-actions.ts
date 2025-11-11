@@ -1,8 +1,9 @@
 'use server';
 
 import { v2 as cloudinary } from 'cloudinary';
-import { initializeFirebaseServer } from '@/firebase/server-init';
+import admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { firebaseConfig } from '@/firebase/config';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,10 +11,23 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export async function uploadToCloudinary(formData: FormData) {
-  const { firestore } = initializeFirebaseServer();
+// Direct initialization of Firebase Admin SDK
+function initializeAdminApp() {
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
+  return admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    ...firebaseConfig
+  });
+}
 
+
+export async function uploadToCloudinary(formData: FormData) {
   try {
+    const adminApp = initializeAdminApp();
+    const firestore = adminApp.firestore();
+
     const file = formData.get('photo') as File;
     const note = formData.get('note') as string;
     const tags = formData.get('tags') as string;
