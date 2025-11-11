@@ -23,10 +23,10 @@ interface PhotoCardProps {
 
 const rotations = ['rotate-1', '-rotate-2', 'rotate-2', '-rotate-1', 'rotate-3'];
 
-// Initialize Cloudinary
+// Initialize Cloudinary with a hardcoded cloud name to prevent env var issues.
 const cld = new Cloudinary({
   cloud: {
-    cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    cloudName: 'dgodngj10',
   },
 });
 
