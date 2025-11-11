@@ -16,14 +16,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Mic, FileAudio, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react"
+import { Mic, FileAudio, Image as ImageIcon, Loader2 } from "lucide-react"
 import { useState } from "react";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuthContext } from "@/contexts/auth-provider";
-import { Skeleton } from "../ui/skeleton";
-
+import { User } from "firebase/auth";
 
 const formSchema = z.object({
   photo: z.any().refine(file => file?.length == 1, "Photo is required."),
@@ -31,13 +27,16 @@ const formSchema = z.object({
   tags: z.string().min(1, "Add at least one tag."),
 });
 
+interface UploadFormProps {
+    user: User;
+    familyId: string;
+}
 
-export function UploadForm() {
+export function UploadForm({ user, familyId }: UploadFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
-  const { user, familyId, loading } = useAuthContext();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,11 +49,6 @@ export function UploadForm() {
   const photoRef = form.register("photo");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !familyId) {
-        toast({ title: "Verification Error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
-        return;
-    }
-    
     const photoFile = values.photo[0];
     if (!photoFile) {
         toast({ title: "No photo selected", description: "Please select a photo to upload.", variant: "destructive" });
@@ -106,32 +100,6 @@ export function UploadForm() {
     } finally {
         setIsSubmitting(false);
     }
-  }
-
-  if (loading) {
-      return (
-        <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-10 w-full" />
-        </div>
-      )
-  }
-  
-  if (!familyId) {
-    return (
-        <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>No Family Found</AlertTitle>
-            <AlertDescription>
-                You must create or join a family before you can upload photos.
-                <Link href="/family">
-                    <Button variant="link" className="p-0 h-auto ml-1">Go to the Family page</Button>
-                </Link>
-            </AlertDescription>
-        </Alert>
-    )
   }
 
   return (

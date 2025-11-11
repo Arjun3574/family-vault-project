@@ -1,5 +1,5 @@
 'use client';
-import { UploadForm } from '@/components/photos/upload-form';
+import { UploadPageClient } from '@/components/photos/upload-page-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { UploadCloud } from 'lucide-react';
 
@@ -23,7 +23,7 @@ export default function UploadPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <UploadForm />
+                    <UploadPageClient />
                 </CardContent>
             </Card>
         </div>
