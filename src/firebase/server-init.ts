@@ -15,9 +15,11 @@ interface FirebaseServerServices {
 
 // This function is for SERVER-SIDE use only.
 export function initializeFirebaseServer(): FirebaseServerServices {
+    // Corrected initialization: Do not pass client-side config to the admin SDK.
+    // It will automatically use Application Default Credentials in the App Hosting environment.
     const app = !getApps().length ? initializeApp({
         credential: admin.credential.applicationDefault(),
-        ...firebaseConfig
+        storageBucket: firebaseConfig.storageBucket, // Only storageBucket is needed for storage operations.
     }) : getApp();
     
     return {
