@@ -1,4 +1,3 @@
-'use server';
 
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
@@ -11,13 +10,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-};
+// The body size limit is configured at the Next.js level, not in the route handler itself for App Router.
+// We are removing the config export to fix the build error.
 
 export async function POST(request: Request) {
   try {
@@ -58,7 +52,7 @@ export async function POST(request: Request) {
       familyId: familyId,
       textNote: note || '',
       tagIds: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
-      uploadDate: FieldValue.serverTimestamp(), // Correct way to set server timestamp with Admin SDK
+      uploadDate: FieldValue.serverTimestamp(),
     };
 
     const photoRef = firestore.collection(`families/${familyId}/photos`).doc();
