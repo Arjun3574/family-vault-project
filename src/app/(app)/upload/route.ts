@@ -1,3 +1,5 @@
+'use server';
+
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 import { initializeFirebaseServer } from '@/firebase/server-init';
@@ -51,12 +53,12 @@ export async function POST(request: Request) {
 
     // 2. Save metadata to Firestore
     const photoData = {
-      storageUrl: uploadResult.public_id,
+      storageUrl: uploadResult.public_id, // Storing public_id, not the full URL
       userId: userId,
       familyId: familyId,
       textNote: note || '',
       tagIds: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
-      uploadDate: FieldValue.serverTimestamp(),
+      uploadDate: FieldValue.serverTimestamp(), // Correct way to set server timestamp with Admin SDK
     };
 
     const photoRef = firestore.collection(`families/${familyId}/photos`).doc();

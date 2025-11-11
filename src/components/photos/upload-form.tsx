@@ -25,8 +25,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { Skeleton } from "../ui/skeleton";
-import { useFirestore } from "@/firebase"
-import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore"
 
 
 const formSchema = z.object({
@@ -42,7 +40,6 @@ export function UploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
   const { user, familyId, loading } = useAuthContext();
-  const firestore = useFirestore();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,7 +52,7 @@ export function UploadForm() {
   const photoRef = form.register("photo");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !familyId || !firestore) {
+    if (!user || !familyId) {
         toast({ title: "Verification Error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
         return;
     }
