@@ -1,17 +1,7 @@
 
 import { NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
 import { initializeFirebaseServer } from '@/firebase/server-init';
 import { FieldValue } from 'firebase-admin/firestore';
-
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// The body size limit is configured at the Next.js level, not in the route handler itself for App Router.
-// We are removing the config export to fix the build error.
 
 export async function POST(request: Request) {
   try {
@@ -28,22 +18,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
     }
 
-    // 1. Upload to Cloudinary
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = new Uint8Array(arrayBuffer);
-    const uploadResult = await new Promise<{ public_id: string; secure_url: string }>((resolve, reject) => {
-      cloudinary.uploader.upload_stream({ folder: 'family-vault' }, (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        if (result) {
-          resolve(result as { public_id: string; secure_url: string });
-        } else {
-          reject(new Error('Cloudinary upload result is undefined.'));
-        }
-      }).end(buffer);
+    // 1. Upload to Cloudinary using fetch
+    const cloudinaryFormData = new FormData();
+    cloudinaryFormData.append('file', file);
+    cloudinaryFormData.append('upload_preset', 'family-vault-unsigned'); // Use an unsigned upload preset
+    cloudinaryFormData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!);
+
+    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
+    
+    const cloudinaryResponse = await fetch(cloudinaryUrl, {
+      method: 'POST',
+      body: cloudinaryFormData,
     });
+
+    const uploadResult = await cloudinaryResponse.json();
+
+    if (!cloudinaryResponse.ok || uploadResult.error) {
+       throw new Error(uploadResult.error?.message || 'Cloudinary upload failed.');
+    }
 
     // 2. Save metadata to Firestore
     const photoData = {

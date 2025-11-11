@@ -169,7 +169,7 @@ export function UploadForm({ user, familyId }: UploadFormProps) {
             <FormItem>
                 <FormLabel>Voice Note (Optional)</FormLabel>
                 <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" disabled={isSubmitting}>
+                    <Button type="button" variant="outline" disabled={true}>
                         <Mic className="mr-2 h-4 w-4"/>
                         Record Voice Note
                     </Button>
@@ -179,7 +179,7 @@ export function UploadForm({ user, familyId }: UploadFormProps) {
                     </div>
                 </div>
                 <FormDescription>
-                    Share the story in your own voice.
+                    Share the story in your own voice. (Feature coming soon)
                 </FormDescription>
             </FormItem>
 
