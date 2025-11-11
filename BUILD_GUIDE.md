@@ -40,7 +40,22 @@ You need to enable and configure Authentication, Firestore, and Storage.
 2.  Click **Get started**.
 3.  Follow the on-screen prompts to enable Storage for your project.
 
-### Step 3: Configure Storage CORS Settings (CRITICAL)
+### Step 3: Configure Cloudinary (CRITICAL)
+
+The application uses Cloudinary to handle image uploads and transformations.
+
+1.  **Create a Cloudinary Account:** If you don't have one, sign up for a free account at [Cloudinary](https://cloudinary.com/users/register/free).
+2.  **Find Your Cloud Name:** On your Cloudinary Dashboard, find your **Cloud Name**. This has already been added to your `next.config.ts` and `src/components/photos/upload-form.tsx` files.
+3.  **Enable Unsigned Uploads:**
+    *   Go to **Settings** (click the gear icon in the top right).
+    *   Click on the **Upload** tab.
+    *   Scroll down to the **Upload presets** section.
+    *   Click **Add upload preset**.
+    *   Change the **Preset name** from the random default to `family-vault-unsigned`.
+    *   Set the **Signing Mode** to **Unsigned**.
+    *   Click **Save** at the top of the page.
+
+### Step 4: Configure Storage CORS Settings (CRITICAL)
 
 This is the most common point of failure. You must explicitly tell Firebase Storage to accept uploads from your Firebase Studio development environment.
 
@@ -50,7 +65,7 @@ This is the most common point of failure. You must explicitly tell Firebase Stor
       {
         "origin": [
           "http://localhost:3000",
-          "https://6000-firebase-studio-1761983285994.cluster-73qgvk7hjjadkrjeyexca5ivva.cloudworkstations.dev"
+          "https://6000-firebase-studio-1761983285994.cluster-73qgvk7hjjadkrjeyexca5ivva.dev"
         ],
         "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
         "responseHeader": [
@@ -72,7 +87,7 @@ This is the most common point of failure. You must explicitly tell Firebase Stor
         gsutil cors set cors.json gs://[YOUR_PROJECT_ID].appspot.com
         ```
 
-### Step 4: Enable Required Google Cloud APIs
+### Step 5: Enable Required Google Cloud APIs
 
 The application uses Google APIs for AI features.
 
@@ -81,7 +96,7 @@ The application uses Google APIs for AI features.
 3.  Search for and **Enable** the following API:
     *   **Gemini API** (also listed as `generativelanguage.googleapis.com`)
 
-### Step 5: Get Project Configuration and Code
+### Step 6: Get Project Configuration and Code
 
 1.  **Update `firebase/config.ts`**: In your new Firebase Project Console, go to **Project Settings** (click the gear icon). Under the "General" tab, find the "Your apps" section. Copy the Firebase SDK configuration object. Paste this object into the `src/firebase/config.ts` file. (This has been done for you).
 2.  **Update `firestore.rules`**: Copy the contents of the `firestore.rules` file from this project into the **Rules** tab of your Firestore Database in the Firebase Console. Click **Publish**.
@@ -131,10 +146,6 @@ Once the backend is configured, you can build the application code. This project
 
 ### `src/app/actions.ts` - Server Actions
 
-This file contains functions that run securely on the server. They are used for sensitive operations like creating, joining, or deleting a family, ensuring these actions are performed atomically and securely.
-
-### `src/app/client-actions.ts` - Client-Side Actions
-
-This file contains the logic for the photo upload process, which is initiated from the client but interacts with the Firebase backend services (Storage and Firestore).
+This file contains functions that run securely on the server. They are used for sensitive operations like creating, joining, or deleting a family, and for saving photo metadata after a successful client-side upload.
 
 By following this guide, you can successfully set up the backend and build the full-stack FamilyVault application.

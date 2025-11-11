@@ -63,7 +63,7 @@ export function UploadForm({ user, familyId }: UploadFormProps) {
         // Step 1: Upload directly to Cloudinary
         const cloudinaryFormData = new FormData();
         cloudinaryFormData.append('file', photoFile);
-        cloudinaryFormData.append('upload_preset', 'family-vault-unsigned');
+        cloudinaryFormData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
         cloudinaryFormData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!);
 
         const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
