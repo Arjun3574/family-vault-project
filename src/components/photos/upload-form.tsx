@@ -26,6 +26,8 @@ import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { Skeleton } from "../ui/skeleton";
 import { uploadToCloudinary } from "@/app/cloudinary-actions";
+import { useFirestore } from "@/firebase"
+import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore"
 
 
 const formSchema = z.object({
@@ -41,6 +43,7 @@ export function UploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState("");
   const { user, familyId, loading } = useAuthContext();
+  const firestore = useFirestore();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,7 +56,7 @@ export function UploadForm() {
   const photoRef = form.register("photo");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !familyId) {
+    if (!user || !familyId || !firestore) {
         toast({ title: "Verification Error", description: "You must be logged in and part of a family to upload photos.", variant: "destructive" });
         return;
     }
@@ -69,26 +72,37 @@ export function UploadForm() {
     try {
         toast({
           title: "Uploading Photo...",
-          description: "Your memory is being saved to Cloudinary.",
+          description: "Your memory is being saved.",
         });
 
         const formData = new FormData();
         formData.append('photo', photoFile);
-        formData.append('note', values.note || '');
-        formData.append('tags', values.tags);
-        formData.append('familyId', familyId);
-        formData.append('userId', user.uid);
 
-        const result = await uploadToCloudinary(formData);
+        // Step 1: Upload to Cloudinary via Server Action
+        const cloudinaryResult = await uploadToCloudinary(formData);
 
-        if (result.error) {
-            throw new Error(result.error);
+        if (cloudinaryResult.error || !cloudinaryResult.public_id) {
+            throw new Error(cloudinaryResult.error || "Failed to get public ID from Cloudinary.");
         }
         
+        // Step 2: Save metadata to Firestore from the client
+        const photoData = {
+          storageUrl: cloudinaryResult.public_id,
+          userId: user.uid,
+          familyId: familyId,
+          textNote: values.note || '',
+          tagIds: values.tags ? values.tags.split(',').map(t => t.trim().toLowerCase()) : [],
+          uploadDate: serverTimestamp(),
+        };
+
+        const photoRef = doc(collection(firestore, `families/${familyId}/photos`));
+        await setDoc(photoRef, photoData);
+
         toast({
             title: "Memory Uploaded! 🎉",
-            description: "Your photo has been successfully saved to Cloudinary.",
+            description: "Your photo has been successfully saved.",
         });
+
         form.reset();
         setFileName("");
         // Give a slight delay before redirecting to allow user to see the success message
@@ -241,7 +255,7 @@ export function UploadForm() {
             {isSubmitting ? (
                 <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading to Cloudinary...
+                Uploading...
                 </>
             ) : (
             "Add to Vault"

@@ -1,10 +1,9 @@
 'use server';
 
 import { v2 as cloudinary } from 'cloudinary';
-import { addPhoto } from '@/ai/flows/add-photo-flow';
 
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
@@ -12,13 +11,8 @@ cloudinary.config({
 export async function uploadToCloudinary(formData: FormData) {
   try {
     const file = formData.get('photo') as File;
-    const note = formData.get('note') as string;
-    const tags = formData.get('tags') as string;
-    const familyId = formData.get('familyId') as string;
-    const userId = formData.get('userId') as string;
-
-    if (!file || !familyId || !userId) {
-      return { error: 'Missing required data for upload.' };
+    if (!file) {
+      return { error: 'Missing file for upload.' };
     }
 
     // 1. Upload to Cloudinary
@@ -37,21 +31,9 @@ export async function uploadToCloudinary(formData: FormData) {
         }
       }).end(buffer);
     });
-
-    const { public_id } = uploadResult;
-
-    // 2. Save metadata to Firestore via Genkit flow
-    const photoData = {
-      storageUrl: public_id,
-      userId: userId,
-      familyId: familyId,
-      textNote: note || '',
-      tags: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
-    };
     
-    const firestoreResult = await addPhoto(photoData);
-
-    return { id: firestoreResult.id, public_id };
+    // 2. Return only the public_id. The client will handle the Firestore write.
+    return { public_id: uploadResult.public_id };
     
   } catch (error: any) {
     console.error('Error in uploadToCloudinary server action:', error);
