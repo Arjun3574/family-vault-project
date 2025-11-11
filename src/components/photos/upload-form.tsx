@@ -18,8 +18,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Mic, FileAudio, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react"
 import { useState } from "react";
-import { Progress } from "@/components/ui/progress";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -182,14 +180,6 @@ export function UploadForm() {
                 </FormItem>
             )}
             />
-            
-            {isSubmitting && (
-                <div className="space-y-2">
-                    <Label>Upload in progress...</Label>
-                    <Progress value={undefined} />
-                    <p className="text-sm text-muted-foreground">Please wait while your image is uploaded securely.</p>
-                </div>
-            )}
 
             <FormField
             control={form.control}
