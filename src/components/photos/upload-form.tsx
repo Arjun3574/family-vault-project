@@ -25,7 +25,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/contexts/auth-provider";
 import { Skeleton } from "../ui/skeleton";
-import { uploadToCloudinary } from "@/app/cloudinary-actions";
 import { useFirestore } from "@/firebase"
 import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore"
 
@@ -77,27 +76,23 @@ export function UploadForm() {
 
         const formData = new FormData();
         formData.append('photo', photoFile);
+        formData.append('note', values.note || '');
+        formData.append('tags', values.tags);
+        formData.append('userId', user.uid);
+        formData.append('familyId', familyId);
+        
+        // Step 1: Submit to the new API route
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData,
+        });
 
-        // Step 1: Upload to Cloudinary via Server Action
-        const cloudinaryResult = await uploadToCloudinary(formData);
-
-        if (cloudinaryResult.error || !cloudinaryResult.public_id) {
-            throw new Error(cloudinaryResult.error || "Failed to get public ID from Cloudinary.");
+        const result = await response.json();
+        
+        if (!response.ok || result.error) {
+            throw new Error(result.error || "An unexpected response was received from the server.");
         }
         
-        // Step 2: Save metadata to Firestore from the client
-        const photoData = {
-          storageUrl: cloudinaryResult.public_id,
-          userId: user.uid,
-          familyId: familyId,
-          textNote: values.note || '',
-          tagIds: values.tags ? values.tags.split(',').map(t => t.trim().toLowerCase()) : [],
-          uploadDate: serverTimestamp(),
-        };
-
-        const photoRef = doc(collection(firestore, `families/${familyId}/photos`));
-        await setDoc(photoRef, photoData);
-
         toast({
             title: "Memory Uploaded! 🎉",
             description: "Your photo has been successfully saved.",

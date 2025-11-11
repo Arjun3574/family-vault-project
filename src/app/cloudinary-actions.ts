@@ -8,6 +8,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// This server action is now deprecated in favor of the /upload API route,
+// but is kept for reference. The API route handles multipart/form-data
+// and allows for a larger body size limit, which is necessary for file uploads.
 export async function uploadToCloudinary(formData: FormData) {
   try {
     const file = formData.get('photo') as File;
@@ -32,7 +35,6 @@ export async function uploadToCloudinary(formData: FormData) {
       }).end(buffer);
     });
     
-    // 2. Return only the public_id. The client will handle the Firestore write.
     return { public_id: uploadResult.public_id };
     
   } catch (error: any) {
