@@ -42,17 +42,18 @@ You need to enable and configure Authentication, Firestore, and Storage.
 
 ### Step 3: Configure Cloudinary (CRITICAL)
 
-The application uses Cloudinary to handle image uploads and transformations.
+The application uses Cloudinary for direct client-side image uploads. This requires a specific "unsigned" upload preset to be configured.
 
 1.  **Create a Cloudinary Account:** If you don't have one, sign up for a free account at [Cloudinary](https://cloudinary.com/users/register/free).
 2.  **Find Your Cloud Name:** On your Cloudinary Dashboard, find your **Cloud Name**. The application is currently hardcoded to use `dgodngj10`. If your cloud name is different, you will need to update it in `src/components/photos/upload-form.tsx`.
-3.  **Enable Unsigned Uploads:**
-    *   Go to **Settings** (click the gear icon in the top right).
+3.  **Enable Unsigned Uploads for the `ml_default` Preset:**
+    *   In your Cloudinary Dashboard, go to **Settings** by clicking the gear icon in the top right.
     *   Click on the **Upload** tab.
-    *   Scroll down to the **Upload presets** section.
-    *   Find the preset named **`ml_default`**. Click **Edit** next to it.
+    *   Scroll down to the **Upload presets** section at the bottom.
+    *   You will see a preset named **`ml_default`**. Click the **Edit** link next to it.
+    *   Find the **Signing Mode** option. It is likely set to `Signed`.
     *   Change the **Signing Mode** from `Signed` to **`Unsigned`**.
-    *   Click **Save** at the top of the page.
+    *   Click the **Save** button at the top of the page.
 
 ### Step 4: Configure Storage CORS Settings (CRITICAL)
 
