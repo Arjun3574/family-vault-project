@@ -76,7 +76,6 @@ export function UploadForm() {
         formData.append('userId', user.uid);
         formData.append('familyId', familyId);
         
-        // Step 1: Submit to the new API route
         const response = await fetch('/upload', {
             method: 'POST',
             body: formData,
@@ -95,7 +94,6 @@ export function UploadForm() {
 
         form.reset();
         setFileName("");
-        // Give a slight delay before redirecting to allow user to see the success message
         setTimeout(() => router.push('/dashboard'), 500);
 
     } catch(error: any) {
