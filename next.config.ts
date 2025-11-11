@@ -42,6 +42,7 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: 'dgodngj10',
+    NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: 'family-vault-unsigned',
   },
 };
 
