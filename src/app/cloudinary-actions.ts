@@ -1,9 +1,7 @@
 'use server';
 
 import { v2 as cloudinary } from 'cloudinary';
-import admin from 'firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
-import { firebaseConfig } from '@/firebase/config';
+import { addPhoto } from '@/ai/flows/add-photo-flow';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -11,23 +9,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Direct initialization of Firebase Admin SDK
-function initializeAdminApp() {
-  if (admin.apps.length > 0) {
-    return admin.app();
-  }
-  return admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    ...firebaseConfig
-  });
-}
-
-
 export async function uploadToCloudinary(formData: FormData) {
   try {
-    const adminApp = initializeAdminApp();
-    const firestore = adminApp.firestore();
-
     const file = formData.get('photo') as File;
     const note = formData.get('note') as string;
     const tags = formData.get('tags') as string;
@@ -38,6 +21,7 @@ export async function uploadToCloudinary(formData: FormData) {
       return { error: 'Missing required data for upload.' };
     }
 
+    // 1. Upload to Cloudinary
     const arrayBuffer = await file.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
     const uploadResult = await new Promise<{ public_id: string; secure_url: string }>((resolve, reject) => {
@@ -56,21 +40,21 @@ export async function uploadToCloudinary(formData: FormData) {
 
     const { public_id } = uploadResult;
 
-    const photoRef = firestore.collection(`families/${familyId}/photos`).doc();
+    // 2. Save metadata to Firestore via Genkit flow
     const photoData = {
       storageUrl: public_id,
       userId: userId,
       familyId: familyId,
       textNote: note || '',
-      tagIds: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
-      uploadDate: FieldValue.serverTimestamp(),
+      tags: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
     };
+    
+    const firestoreResult = await addPhoto(photoData);
 
-    await photoRef.set(photoData);
-
-    return { id: photoRef.id, public_id };
+    return { id: firestoreResult.id, public_id };
+    
   } catch (error: any) {
-    console.error('Error uploading to Cloudinary and saving to Firestore:', error);
+    console.error('Error in uploadToCloudinary server action:', error);
     return { error: error.message || 'An unknown error occurred during upload.' };
   }
 }
