@@ -3,9 +3,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { initializeFirebaseServer } from "@/firebase/server-init";
 
-// Initialize on every server action call if needed, or rely on cached instance.
-// For serverless environments, initializing per-call is safer.
-
 export async function createFamilyAtomic(uid: string, familyName: string) {
   const { firestore } = initializeFirebaseServer();
   if (!uid || !familyName) {
