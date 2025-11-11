@@ -21,6 +21,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "firebase/auth";
 import { savePhotoDetails } from "@/app/actions";
+import { useAuthContext } from "@/contexts/auth-provider";
+import { Skeleton } from "../ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 const formSchema = z.object({
   photo: z.any().refine(file => file?.length == 1, "Photo is required."),
@@ -28,12 +33,12 @@ const formSchema = z.object({
   tags: z.string().min(1, "Add at least one tag."),
 });
 
-interface UploadFormProps {
-    user: User;
-    familyId: string;
-}
+const CLOUDINARY_CLOUD_NAME = 'dgodngj10';
+const CLOUDINARY_UPLOAD_PRESET = 'family-vault-unsigned';
 
-export function UploadForm({ user, familyId }: UploadFormProps) {
+
+export function UploadForm() {
+  const { user, familyId, loading } = useAuthContext();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,8 +56,8 @@ export function UploadForm({ user, familyId }: UploadFormProps) {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const photoFile = values.photo[0];
-    if (!photoFile) {
-        toast({ title: "No photo selected", description: "Please select a photo to upload.", variant: "destructive" });
+    if (!photoFile || !user || !familyId) {
+        toast({ title: "Error", description: "User or family information is missing.", variant: "destructive" });
         return;
     }
     
@@ -63,10 +68,9 @@ export function UploadForm({ user, familyId }: UploadFormProps) {
         // Step 1: Upload directly to Cloudinary
         const cloudinaryFormData = new FormData();
         cloudinaryFormData.append('file', photoFile);
-        cloudinaryFormData.append('upload_preset', 'family-vault-unsigned');
-        cloudinaryFormData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!);
+        cloudinaryFormData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-        const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
+        const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
     
         const cloudinaryResponse = await fetch(cloudinaryUrl, {
             method: 'POST',
@@ -107,6 +111,35 @@ export function UploadForm({ user, familyId }: UploadFormProps) {
     } finally {
         setIsSubmitting(false);
     }
+  }
+  
+    if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
+  }
+
+  if (!familyId) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>No Family Found</AlertTitle>
+        <AlertDescription>
+          You must create or join a family before you can upload photos.
+          <Link href="/family">
+            <Button variant="link" className="p-0 h-auto ml-1">
+              Go to the Family page
+            </Button>
+          </Link>
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
