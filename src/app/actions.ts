@@ -122,3 +122,4 @@ export async function savePhotoDetails(data: {
 
   return { success: true, id: photoRef.id };
 }
+
