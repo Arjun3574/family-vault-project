@@ -1,9 +1,9 @@
-
 'use server';
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, Firestore, doc, collection, writeBatch, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 // Helper function to initialize Firebase and return Firestore instance for server-side operations.
 function getDb(): Firestore {
@@ -49,10 +49,6 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
     const familyRef = doc(firestore, "families", familyId);
     const userRef = doc(firestore, "userProfiles", uid);
     
-    // In server actions with client SDK, we can't easily check for existence
-    // without a 'getDoc' call, which we'll trust the rules to enforce.
-    // The rules should prevent joining a non-existent family.
-
     const batch = writeBatch(firestore);
 
     const familyUpdate = { memberIds: arrayUnion(uid) };
@@ -72,22 +68,11 @@ export async function deleteFamilyAtomic(uid: string, familyId: string) {
 
   const firestore = getDb();
   
-  // Note: Firestore security rules are the primary enforcement mechanism here.
-  // We are assuming the rules correctly check for ownership before allowing deletion.
-  // The client-side logic already confirms this, but rules provide the real security.
-  
   const familyRef = doc(firestore, "families", familyId);
   const batch = writeBatch(firestore);
   
-  // Deleting the family document. We cannot query members to update them
-  // easily in a single server action without more complex logic.
-  // Client-side will need to handle the user profile update upon family deletion.
   batch.delete(familyRef);
   
-  // This simplified version relies on client-side logic to clear familyId
-  // from profiles or a more complex backend process (like a function).
-  // For this context, we will just delete the family doc itself.
-
   await batch.commit();
   return { success: true };
 }
@@ -106,6 +91,8 @@ export async function savePhotoDetails(data: {
   }
 
   const firestore = getDb();
+  const photosCollection = collection(firestore, `families/${familyId}/photos`);
+  const photoRef = doc(photosCollection);
   
   const photoData = {
     storageUrl: storageId,
@@ -116,10 +103,16 @@ export async function savePhotoDetails(data: {
     uploadDate: serverTimestamp(),
   };
 
-  const photosCollection = collection(firestore, `families/${familyId}/photos`);
-  const photoRef = doc(photosCollection);
-  await setDoc(photoRef, photoData);
-
-  return { success: true, id: photoRef.id };
+  try {
+    await setDoc(photoRef, photoData);
+    return { success: true, id: photoRef.id };
+  } catch (error: any) {
+    // Re-throw a more detailed error for the client to catch and display.
+    // This allows us to see the security rule context in the Next.js overlay.
+    throw new FirestorePermissionError({
+        path: photoRef.path,
+        operation: 'create',
+        requestResourceData: photoData,
+    });
+  }
 }
-
