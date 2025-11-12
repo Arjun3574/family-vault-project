@@ -1,21 +1,25 @@
+
 'use server';
 
-import admin from 'firebase-admin';
-import { getApps, initializeApp, getApp } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { getFirestore, FieldValue, Firestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin SDK if not already initialized.
-// This is the correct pattern for server-side code in Next.js.
-if (!getApps().length) {
-  initializeApp();
+// Helper function to initialize Firebase Admin SDK and return Firestore instance.
+// This ensures services are initialized only once per request lifecycle if needed,
+// but scoped to the function call.
+function getDb(): Firestore {
+  if (!getApps().length) {
+    initializeApp();
+  }
+  return getFirestore();
 }
 
-const firestore = getFirestore();
 
 export async function createFamilyAtomic(uid: string, familyName: string) {
   if (!uid || !familyName) {
     throw new Error("User ID and family name are required.");
   }
+  const firestore = getDb();
   const familyRef = firestore.collection("families").doc();
   const userRef = firestore.collection("userProfiles").doc(uid);
 
@@ -42,6 +46,7 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
         throw new Error("User ID and Family ID are required.");
     }
 
+    const firestore = getDb();
     const familyRef = firestore.collection("families").doc(familyId);
     const userRef = firestore.collection("userProfiles").doc(uid);
     
@@ -67,6 +72,7 @@ export async function deleteFamilyAtomic(uid: string, familyId: string) {
     throw new Error("User ID and Family ID are required.");
   }
 
+  const firestore = getDb();
   const familyRef = firestore.collection("families").doc(familyId);
   const familySnap = await familyRef.get();
 
@@ -110,6 +116,8 @@ export async function savePhotoDetails(data: {
     throw new Error("Missing required photo details.");
   }
 
+  const firestore = getDb();
+  
   const photoData = {
     storageUrl: storageId,
     userId: userId,
