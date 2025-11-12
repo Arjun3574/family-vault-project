@@ -1,34 +1,32 @@
 'use server';
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, Firestore, doc, collection, writeBatch, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
-import { firebaseConfig } from '@/firebase/config';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-// Helper function to initialize Firebase and return Firestore instance for server-side operations.
-function getDb(): Firestore {
-  if (!getApps().length) {
-    initializeApp(firebaseConfig);
-  }
-  return getFirestore(getApp());
+// Initialize Firebase Admin SDK
+// In a managed environment like App Hosting, the SDK automatically finds credentials.
+if (!getApps().length) {
+  initializeApp();
 }
 
+const firestore = getFirestore();
 
 export async function createFamilyAtomic(uid: string, familyName: string) {
   if (!uid || !familyName) {
     throw new Error("User ID and family name are required.");
   }
-  const firestore = getDb();
-  const familyRef = doc(collection(firestore, "families"));
-  const userRef = doc(firestore, "userProfiles", uid);
+  
+  const familyRef = firestore.collection("families").doc();
+  const userRef = firestore.collection("userProfiles").doc(uid);
 
-  const batch = writeBatch(firestore);
+  const batch = firestore.batch();
 
   const familyData = { 
     familyName, 
     owner: uid, 
     memberIds: [uid],
-    createdAt: serverTimestamp() 
+    createdAt: FieldValue.serverTimestamp() 
   };
   batch.set(familyRef, familyData);
   
@@ -45,13 +43,12 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
         throw new Error("User ID and Family ID are required.");
     }
 
-    const firestore = getDb();
-    const familyRef = doc(firestore, "families", familyId);
-    const userRef = doc(firestore, "userProfiles", uid);
+    const familyRef = firestore.collection("families").doc(familyId);
+    const userRef = firestore.collection("userProfiles").doc(uid);
     
-    const batch = writeBatch(firestore);
+    const batch = firestore.batch();
 
-    const familyUpdate = { memberIds: arrayUnion(uid) };
+    const familyUpdate = { memberIds: FieldValue.arrayUnion(uid) };
     batch.update(familyRef, familyUpdate);
 
     const userProfileUpdate = { familyId };
@@ -65,11 +62,9 @@ export async function deleteFamilyAtomic(uid: string, familyId: string) {
   if (!uid || !familyId) {
     throw new Error("User ID and Family ID are required.");
   }
-
-  const firestore = getDb();
   
-  const familyRef = doc(firestore, "families", familyId);
-  const batch = writeBatch(firestore);
+  const familyRef = firestore.collection("families").doc(familyId);
+  const batch = firestore.batch();
   
   batch.delete(familyRef);
   
@@ -89,10 +84,9 @@ export async function savePhotoDetails(data: {
   if (!familyId || !userId || !storageId) {
     throw new Error("Missing required photo details.");
   }
-
-  const firestore = getDb();
-  const photosCollection = collection(firestore, `families/${familyId}/photos`);
-  const photoRef = doc(photosCollection);
+  
+  const photosCollection = firestore.collection(`families/${familyId}/photos`);
+  const photoRef = photosCollection.doc();
   
   const photoData = {
     storageUrl: storageId,
@@ -100,15 +94,19 @@ export async function savePhotoDetails(data: {
     familyId: familyId,
     textNote: note || '',
     tagIds: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
-    uploadDate: serverTimestamp(),
+    uploadDate: FieldValue.serverTimestamp(),
   };
 
   try {
-    await setDoc(photoRef, photoData);
+    await photoRef.set(photoData);
     return { success: true, id: photoRef.id };
   } catch (error: any) {
     // Re-throw a more detailed error for the client to catch and display.
     // This allows us to see the security rule context in the Next.js overlay.
+    // NOTE: In an admin context, the `auth` object in the error will be null,
+    // as admin operations don't have a user auth context. The check in the
+    // security rule should ideally check for admin access or user access.
+    // For this prototype, we'll see the request and can adjust rules accordingly.
     throw new FirestorePermissionError({
         path: photoRef.path,
         operation: 'create',
