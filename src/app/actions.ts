@@ -1,8 +1,8 @@
 
 'use server';
 
-import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getFirestore, FieldValue, Firestore, doc, collection, writeBatch } from 'firebase/firestore';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore, Firestore, doc, collection, writeBatch, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 // Helper function to initialize Firebase and return Firestore instance for server-side operations.
@@ -28,7 +28,7 @@ export async function createFamilyAtomic(uid: string, familyName: string) {
     familyName, 
     owner: uid, 
     memberIds: [uid],
-    createdAt: FieldValue.serverTimestamp() 
+    createdAt: serverTimestamp() 
   };
   batch.set(familyRef, familyData);
   
@@ -55,7 +55,7 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
 
     const batch = writeBatch(firestore);
 
-    const familyUpdate = { memberIds: FieldValue.arrayUnion(uid) };
+    const familyUpdate = { memberIds: arrayUnion(uid) };
     batch.update(familyRef, familyUpdate);
 
     const userProfileUpdate = { familyId };
@@ -113,7 +113,7 @@ export async function savePhotoDetails(data: {
     familyId: familyId,
     textNote: note || '',
     tagIds: tags ? tags.split(',').map(t => t.trim().toLowerCase()) : [],
-    uploadDate: FieldValue.serverTimestamp(),
+    uploadDate: serverTimestamp(),
   };
 
   const photosCollection = collection(firestore, `families/${familyId}/photos`);
