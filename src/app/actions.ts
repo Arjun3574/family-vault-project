@@ -1,10 +1,18 @@
 'use server';
 
-import { FieldValue } from "firebase-admin/firestore";
-import { initializeFirebaseServer } from "@/firebase/server-init";
+import admin from 'firebase-admin';
+import { getApps, initializeApp, getApp } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin SDK if not already initialized.
+// This is the correct pattern for server-side code in Next.js.
+if (!getApps().length) {
+  initializeApp();
+}
+
+const firestore = getFirestore();
 
 export async function createFamilyAtomic(uid: string, familyName: string) {
-  const { firestore } = initializeFirebaseServer();
   if (!uid || !familyName) {
     throw new Error("User ID and family name are required.");
   }
@@ -30,7 +38,6 @@ export async function createFamilyAtomic(uid: string, familyName: string) {
 
 
 export async function joinFamilyAtomic(uid: string, familyId: string) {
-    const { firestore } = initializeFirebaseServer();
     if (!uid || !familyId) {
         throw new Error("User ID and Family ID are required.");
     }
@@ -56,7 +63,6 @@ export async function joinFamilyAtomic(uid: string, familyId: string) {
 }
 
 export async function deleteFamilyAtomic(uid: string, familyId: string) {
-  const { firestore } = initializeFirebaseServer();
   if (!uid || !familyId) {
     throw new Error("User ID and Family ID are required.");
   }
@@ -98,7 +104,6 @@ export async function savePhotoDetails(data: {
   tags: string;
   storageId: string;
 }) {
-  const { firestore } = initializeFirebaseServer();
   const { familyId, userId, note, tags, storageId } = data;
 
   if (!familyId || !userId || !storageId) {
