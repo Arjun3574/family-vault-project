@@ -29,9 +29,11 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
 
-    // Rules for photos reverted to use get() for compatibility without Cloud Functions.
+    // This rule allows writes from an authenticated client OR from the server (where auth is null).
+    // It continues to protect reads, requiring an authenticated user who is part of the family.
     match /families/{familyId}/photos/{photoId} {
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
+      allow read: if request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId;
+      allow write: if (request.auth != null && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.familyId == familyId) || request.auth == null;
     }
     
     // Rules for special days reverted to use get() for compatibility without Cloud Functions.
