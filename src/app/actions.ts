@@ -114,10 +114,9 @@ export async function savePhotoDetails(data: {
   };
 
   const photosCollection = collection(firestore, `families/${familyId}/photos`);
-  const photoRef = doc(photosCollection);
-
+  
   try {
-    await addDoc(photosCollection, photoData);
+    const photoRef = await addDoc(photosCollection, photoData);
     return { success: true, id: photoRef.id };
   } catch (error: any) {
     // Re-throw a more detailed error for the client to catch and display.
@@ -127,9 +126,32 @@ export async function savePhotoDetails(data: {
     // security rule should ideally check for admin access or user access.
     // For this prototype, we'll see the request and can adjust rules accordingly.
     throw new FirestorePermissionError({
-        path: photoRef.path,
+        path: `families/${familyId}/photos/new-doc`,
         operation: 'create',
         requestResourceData: photoData,
+    });
+  }
+}
+
+export async function deletePhoto(familyId: string, photoId: string) {
+  if (!familyId || !photoId) {
+    throw new Error("Family ID and Photo ID are required.");
+  }
+  
+  const app = getDb();
+  const firestore = getFirestore(app);
+  
+  const photoRef = doc(firestore, `families/${familyId}/photos`, photoId);
+
+  try {
+    await deleteDoc(photoRef);
+    // Note: This does not delete the image from Cloudinary to keep it simple.
+    // In a real app, you would add a call to Cloudinary's Admin API here.
+    return { success: true };
+  } catch (error: any) {
+     throw new FirestorePermissionError({
+        path: photoRef.path,
+        operation: 'delete',
     });
   }
 }

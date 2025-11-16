@@ -13,6 +13,7 @@ type FirestorePhoto = {
   textNote: string;
   tagIds: string[];
   uploadDate: Timestamp;
+  familyId: string;
 };
 
 export default function DashboardPage() {
@@ -36,6 +37,7 @@ export default function DashboardPage() {
     description: p.textNote || '',
     tags: p.tagIds || [],
     date: p.uploadDate?.toDate().toISOString() || new Date().toISOString(),
+    familyId: p.familyId,
   })) : [];
   
   const isLoading = isUserLoading || (familyId && isPhotosLoading);
